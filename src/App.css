@@ -1,0 +1,49 @@
+#root {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 2rem;
+    text-align: center;
+}
+
+.App {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.card {
+    padding: 2em;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background: #f9f9f9;
+    text-align: left;
+}
+
+.card h2 {
+    margin-top: 0;
+}
+
+.card ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+.card li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.card li:last-child {
+    border-bottom: none;
+}
+
+@media (prefers-color-scheme: dark) {
+    .card {
+        background: #2d2d2d;
+        border-color: #404040;
+    }
+
+    .card li {
+        border-color: #404040;
+    }
+}
