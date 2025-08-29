@@ -1,11 +1,10 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
     container_name: media-vault-db
-    platform: linux/amd64  # Add this line to force x86 architecture
+    platform: linux/amd64
     restart: unless-stopped
     environment:
       POSTGRES_DB: mediaVault
@@ -21,31 +20,47 @@ services:
       timeout: 5s
       retries: 5
 
+  backend:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    container_name: media-vault-backend
+    platform: linux/amd64
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=mediaVault
+      - DB_USER=username
+      - DB_PASSWORD=password
+      - PORT=3001
+      - NODE_ENV=production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - upload_data:/app/uploads
 
-  # React Frontend Application
   frontend:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: media-vault-frontend
-    platform: linux/amd64  # Add this line for consistency
+    platform: linux/amd64
     restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
-      # Vite environment variables (prefixed with VITE_)
       - VITE_API_URL=http://localhost:3001
-      - VITE_DB_HOST=postgres
-      - VITE_DB_PORT=5432
-      - VITE_DB_NAME=mediaVault
-      - VITE_DB_USER=username
-      - VITE_DB_PASSWORD=password
     depends_on:
-      postgres:
-        condition: service_healthy
+      - backend
 
 volumes:
   postgres_data:
+    driver: local
+  upload_data:
     driver: local
 
 networks:

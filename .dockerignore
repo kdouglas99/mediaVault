@@ -3,7 +3,13 @@ npm-debug.log
 .git
 .gitignore
 README.md
-.env
+.env.local
+.env.development
+.env.test
+.env.production
 .nyc_output
 coverage
 .idea
+.DS_Store
+*.log
+uploads/
