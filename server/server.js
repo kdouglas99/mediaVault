@@ -65,17 +65,18 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Lightweight in-memory window rate limiter (per-process)
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const RATE_LIMIT_DEFAULT_MAX = 100;
-const RATE_LIMIT_UPLOAD_MAX = 5;
+const RATE_LIMIT_UPLOAD_MAX = Number(process.env.UPLOAD_RATE_LIMIT_MAX || 3);
+const UPLOAD_RATE_LIMIT_WINDOW_MS = Number(process.env.UPLOAD_RATE_LIMIT_WINDOW_MS || (2 * 60 * 1000));
 const rateBuckets = new Map();
 /**
  * Sliding window counter per IP
  */
-const rateLimit = (maxRequests = RATE_LIMIT_DEFAULT_MAX) => (req, res, next) => {
+const rateLimit = (maxRequests = RATE_LIMIT_DEFAULT_MAX, windowMs = RATE_LIMIT_WINDOW_MS) => (req, res, next) => {
+    if (req.method === 'OPTIONS') return next(); // don't rate-limit preflight
     const now = Date.now();
     const ip = req.ip || req.socket?.remoteAddress || 'unknown';
     const bucket = rateBuckets.get(ip) || [];
-    const cutoff = now - RATE_LIMIT_WINDOW_MS;
-    // prune old
+    const cutoff = now - windowMs;
     const pruned = bucket.filter((t) => t > cutoff);
     if (pruned.length >= maxRequests) {
         return res.status(429).json({ success: false, error: 'Too many requests from this IP, please try again later.' });
@@ -353,7 +354,6 @@ const initDbHandler = async (req, res) => {
     client?.release();
   }
 };
-
 app.post('/api/init-db', rateLimit(), initDbHandler);
 app.get('/api/init-db', rateLimit(), initDbHandler);
 
@@ -450,12 +450,13 @@ const insertBatchIntoStaging = async (client, rows) => {
 };
 
 // CSV import route
-app.post('/api/import/csv', rateLimit(RATE_LIMIT_UPLOAD_MAX), upload.single('csvFile'), async (req, res) => {
+app.post('/api/import/csv', rateLimit(RATE_LIMIT_UPLOAD_MAX, UPLOAD_RATE_LIMIT_WINDOW_MS), upload.single('csvFile'), async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ success: false, error: 'CSV file is required' });
     }
 
     const filePath = req.file.path;
+    const ip = req.ip || req.socket?.remoteAddress || 'unknown';
     let client;
 
     try {
@@ -487,7 +488,6 @@ app.post('/api/import/csv', rateLimit(RATE_LIMIT_UPLOAD_MAX), upload.single('csv
                         await insertBatchIntoStaging(client, batch);
                         batch = [];
                     }
-                    // Run import function
                     const { rows } = await client.query('SELECT import_media_csv() AS imported');
                     await client.query('COMMIT');
                     resolve(rows[0]);
@@ -500,6 +500,8 @@ app.post('/api/import/csv', rateLimit(RATE_LIMIT_UPLOAD_MAX), upload.single('csv
 
         // Clean up uploaded file
         fs.unlink(filePath, () => {});
+        // Reset the rate bucket for this IP after a successful import so user can run again without waiting
+        rateBuckets.delete(ip);
 
         res.json({ success: true, message: 'CSV imported successfully' });
     } catch (error) {
@@ -510,7 +512,6 @@ app.post('/api/import/csv', rateLimit(RATE_LIMIT_UPLOAD_MAX), upload.single('csv
         res.status(500).json({ success: false, error: 'CSV import failed' });
     } finally {
         client?.release();
-        // Ensure cleanup
         fs.unlink(filePath, () => {});
     }
 });
