@@ -26,4 +26,6 @@ dist-ssr
 
  server/.env
 
- package-lock.json
+package-lock.json
+
+server/package-lock.json
