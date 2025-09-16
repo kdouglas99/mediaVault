@@ -283,6 +283,15 @@
             animation: slideIn 0.2s ease-out;
         }
 
+        .filter-chip.cmaf-chip {
+            background: var(--accent);
+        }
+
+        .filter-chip.streaming-chip {
+            background: var(--warning);
+            color: var(--text-dark);
+        }
+
         @keyframes slideIn {
             from { opacity: 0; transform: translateY(-10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -377,7 +386,7 @@
             width: 100%;
             border-collapse: collapse;
             table-layout: fixed;
-            min-width: 1400px;
+            min-width: 1600px;
         }
 
         .media-table th {
@@ -411,12 +420,14 @@
         }
 
         /* Column widths */
-        .col-title { width: 300px; }
-        .col-series { width: 250px; }
+        .col-title { width: 280px; }
+        .col-series { width: 220px; }
         .col-season-episode { width: 80px; }
         .col-type { width: 120px; }
         .col-availability { width: 140px; }
-        .col-features { width: 200px; }
+        .col-features { width: 180px; }
+        .col-streaming-properties { width: 180px; }
+        .col-cmaf { width: 100px; }
         .col-updated { width: 160px; }
         .col-guid { width: 200px; }
 
@@ -429,6 +440,22 @@
         .feature-tag {
             background: var(--accent);
             color: white;
+            padding: 0.15rem 0.4rem;
+            border-radius: 999px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .streaming-property-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+        }
+
+        .streaming-property-tag {
+            background: var(--warning);
+            color: var(--text-dark);
             padding: 0.15rem 0.4rem;
             border-radius: 999px;
             font-size: 0.7rem;
@@ -465,6 +492,26 @@
         }
 
         .availability-badge.unknown {
+            background: #6b7280;
+            color: white;
+        }
+
+        .cmaf-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .cmaf-enabled {
+            background: var(--accent);
+            color: white;
+        }
+
+        .cmaf-disabled {
             background: #6b7280;
             color: white;
         }
@@ -617,6 +664,28 @@
                 </div>
 
                 <div class="filter-group">
+                    <label>🎥 Streaming Properties</label>
+                    <div class="multi-select-container">
+                        <button class="multi-select-button" data-filter="streamingProperties">
+                            <span>Select properties...</span>
+                            <span>▼</span>
+                        </button>
+                        <div class="multi-select-dropdown"></div>
+                    </div>
+                </div>
+
+                <div class="filter-group">
+                    <label>📦 CMAF</label>
+                    <div class="multi-select-container">
+                        <button class="multi-select-button" data-filter="cmaf">
+                            <span>Select CMAF status...</span>
+                            <span>▼</span>
+                        </button>
+                        <div class="multi-select-dropdown"></div>
+                    </div>
+                </div>
+
+                <div class="filter-group">
                     <label>🔢 Season</label>
                     <div class="multi-select-container">
                         <button class="multi-select-button" data-filter="season">
@@ -660,6 +729,10 @@
             <span class="stat-label">Series</span>
         </div>
         <div class="stat-item">
+            <span class="stat-number" id="cmaf-count">0</span>
+            <span class="stat-label">CMAF Enabled</span>
+        </div>
+        <div class="stat-item">
             <span class="stat-number" id="encoded-count">0</span>
             <span class="stat-label">Encoded</span>
         </div>
@@ -680,6 +753,8 @@
                     <th class="col-type">Type</th>
                     <th class="col-availability">Availability</th>
                     <th class="col-features">Features</th>
+                    <th class="col-streaming-properties">Streaming Properties</th>
+                    <th class="col-cmaf">CMAF</th>
                     <th class="col-updated">Updated</th>
                     <th class="col-guid">GUID</th>
                 </tr>
@@ -713,6 +788,8 @@
         contentType: new Set(),
         availability: new Set(),
         features: new Set(),
+        streamingProperties: new Set(),
+        cmaf: new Set(),
         season: new Set(),
         episode: new Set()
     };
@@ -739,6 +816,18 @@
             label: 'Features',
             icon: '⭐',
             isArray: true
+        },
+        streamingProperties: {
+            field: 'streaming_properties',
+            label: 'Streaming Properties',
+            icon: '🎥',
+            isArray: true
+        },
+        cmaf: {
+            field: 'cmaf_status',
+            label: 'CMAF',
+            icon: '📦',
+            isComputed: true
         },
         season: {
             field: 'season_number',
@@ -768,10 +857,31 @@
         totalItemsSpan: document.getElementById('total-items'),
         filteredItems: document.getElementById('filtered-items'),
         totalSeries: document.getElementById('total-series'),
+        cmafCount: document.getElementById('cmaf-count'),
         encodedCount: document.getElementById('encoded-count'),
         activeFilters: document.getElementById('active-filters'),
         clearAllFilters: document.getElementById('clear-all-filters')
     };
+
+    // Helper function to determine CMAF status
+    function getCMAFStatus(item) {
+        const features = item.premium_features || [];
+        const streamingProps = item.streaming_properties || [];
+
+        const hasCMAFFeatures = features.some(f =>
+            f.toLowerCase().includes('cmaf') ||
+            f.toLowerCase().includes('dash') ||
+            f.toLowerCase().includes('hls')
+        );
+
+        const hasCMAFStreaming = streamingProps.some(p =>
+            p.toLowerCase().includes('cmaf') ||
+            p.toLowerCase().includes('dash') ||
+            p.toLowerCase().includes('hls')
+        );
+
+        return hasCMAFFeatures || hasCMAFStreaming ? 'Enabled' : 'Disabled';
+    }
 
     // Initialize multi-select functionality
     function initializeMultiSelect() {
@@ -828,7 +938,7 @@
 
     function populateDropdown(filterType, dropdown) {
         const config = filterConfigs[filterType];
-        const values = getUniqueValues(config);
+        const values = getUniqueValues(config, filterType);
 
         dropdown.innerHTML = '';
 
@@ -920,18 +1030,23 @@
         noResults.style.display = visibleCount === 0 && searchTerm.trim() !== '' ? 'block' : 'none';
     }
 
-    function getUniqueValues(config) {
+    function getUniqueValues(config, filterType) {
         const values = new Set();
 
         currentData.forEach(item => {
-            let itemValue = item[config.field];
+            if (config.isComputed && filterType === 'cmaf') {
+                // Special handling for CMAF
+                values.add(getCMAFStatus(item));
+            } else {
+                let itemValue = item[config.field];
 
-            if (config.isArray && Array.isArray(itemValue)) {
-                itemValue.forEach(val => {
-                    if (val) values.add(val);
-                });
-            } else if (itemValue !== null && itemValue !== undefined && itemValue !== '') {
-                values.add(itemValue.toString());
+                if (config.isArray && Array.isArray(itemValue)) {
+                    itemValue.forEach(val => {
+                        if (val) values.add(val);
+                    });
+                } else if (itemValue !== null && itemValue !== undefined && itemValue !== '') {
+                    values.add(itemValue.toString());
+                }
             }
         });
 
@@ -961,6 +1076,13 @@
                 hasFilters = true;
                 const chip = document.createElement('div');
                 chip.className = 'filter-chip';
+
+                // Add special styling for CMAF and streaming properties
+                if (filterType === 'cmaf') {
+                    chip.classList.add('cmaf-chip');
+                } else if (filterType === 'streamingProperties') {
+                    chip.classList.add('streaming-chip');
+                }
 
                 const category = document.createElement('span');
                 category.className = 'filter-chip-category';
@@ -1023,6 +1145,12 @@
                 if (filterSet.size === 0) return true;
 
                 const config = filterConfigs[filterType];
+
+                if (config.isComputed && filterType === 'cmaf') {
+                    const cmafStatus = getCMAFStatus(item);
+                    return filterSet.has(cmafStatus);
+                }
+
                 let itemValue = item[config.field];
 
                 if (config.isArray && Array.isArray(itemValue)) {
@@ -1093,7 +1221,7 @@
 
                 renderMediaTable(filteredData);
                 updatePagination(result.pagination);
-                updateStats(filteredData.length);
+                updateStats(filteredData);
 
                 elements.loading.style.display = 'none';
                 elements.tableWrapper.style.display = 'block';
@@ -1116,11 +1244,12 @@
             const title = item.title || 'N/A';
             const series = item.series_title || 'N/A';
             const guid = item.guid || 'N/A';
+            const cmafStatus = getCMAFStatus(item);
 
             return `
                 <tr>
-                    <td class="col-title" title="${title}">${title.length > 40 ? title.substring(0, 37) + '...' : title}</td>
-                    <td class="col-series" title="${series}">${series.length > 30 ? series.substring(0, 27) + '...' : series}</td>
+                    <td class="col-title" title="${title}">${title.length > 35 ? title.substring(0, 32) + '...' : title}</td>
+                    <td class="col-series" title="${series}">${series.length > 25 ? series.substring(0, 22) + '...' : series}</td>
                     <td class="col-season-episode">
                         ${item.season_number ? `S${item.season_number}` : ''}
                         ${item.episode_number ? `E${item.episode_number}` : ''}
@@ -1128,6 +1257,8 @@
                     <td class="col-type">${renderContentTypeBadge(item.content_type)}</td>
                     <td class="col-availability">${renderAvailabilityBadge(item.availability_state)}</td>
                     <td class="col-features">${renderFeatureTags(item.premium_features)}</td>
+                    <td class="col-streaming-properties">${renderStreamingPropertyTags(item.streaming_properties)}</td>
+                    <td class="col-cmaf">${renderCMAFIndicator(cmafStatus)}</td>
                     <td class="col-updated">${formatDate(item.updated_timestamp)}</td>
                     <td class="col-guid" title="${guid}">${guid.length > 20 ? guid.substring(0, 17) + '...' : guid}</td>
                 </tr>
@@ -1137,7 +1268,7 @@
         if (data.length === 0) {
             elements.mediaTbody.innerHTML = `
                 <tr>
-                    <td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                    <td colspan="10" style="text-align: center; padding: 2rem; color: var(--text-muted);">
                         No media items found matching the current filters.
                     </td>
                 </tr>
@@ -1154,9 +1285,23 @@
 
     function renderFeatureTags(features) {
         if (!features || features.length === 0) return '<span style="color: var(--text-muted);">N/A</span>';
-        return `<div class="feature-tags">${features.slice(0, 3).map(feature =>
+        return `<div class="feature-tags">${features.slice(0, 2).map(feature =>
             `<span class="feature-tag">${feature}</span>`
-        ).join('')}${features.length > 3 ? '<span style="color: var(--text-muted); font-size: 0.7rem;">+' + (features.length - 3) + ' more</span>' : ''}</div>`;
+        ).join('')}${features.length > 2 ? '<span style="color: var(--text-muted); font-size: 0.7rem;">+' + (features.length - 2) + '</span>' : ''}</div>`;
+    }
+
+    function renderStreamingPropertyTags(properties) {
+        if (!properties || properties.length === 0) return '<span style="color: var(--text-muted);">N/A</span>';
+        return `<div class="streaming-property-tags">${properties.slice(0, 2).map(property =>
+            `<span class="streaming-property-tag">${property}</span>`
+        ).join('')}${properties.length > 2 ? '<span style="color: var(--text-muted); font-size: 0.7rem;">+' + (properties.length - 2) + '</span>' : ''}</div>`;
+    }
+
+    function renderCMAFIndicator(status) {
+        const isEnabled = status === 'Enabled';
+        return `<span class="cmaf-indicator ${isEnabled ? 'cmaf-enabled' : 'cmaf-disabled'}">
+            ${isEnabled ? '✅' : '❌'} ${status}
+        </span>`;
     }
 
     function renderContentTypeBadge(type) {
@@ -1177,8 +1322,12 @@
         elements.nextBtn.disabled = !pagination.hasNext;
     }
 
-    function updateStats(filteredCount) {
-        elements.filteredItems.textContent = filteredCount.toLocaleString();
+    function updateStats(filteredData) {
+        elements.filteredItems.textContent = filteredData.length.toLocaleString();
+
+        // Count CMAF enabled items
+        const cmafEnabled = filteredData.filter(item => getCMAFStatus(item) === 'Enabled').length;
+        elements.cmafCount.textContent = cmafEnabled.toLocaleString();
 
         if (allStats.premiumFeatures) {
             const encodedFeature = allStats.premiumFeatures.find(f =>
