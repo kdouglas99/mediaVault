@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -154,6 +155,86 @@
             width: 100%;
         }
 
+        /* Horizontal Navigation Slider */
+        .horizontal-slider {
+            background: var(--surface-2);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .slider-label {
+            font-weight: 600;
+            color: var(--text);
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+
+        .slider-container {
+            flex: 1;
+            position: relative;
+            height: 40px;
+            display: flex;
+            align-items: center;
+        }
+
+        .range-slider {
+            width: 100%;
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+
+        .range-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--primary);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(96, 165, 250, 0.3);
+            transition: all 0.2s ease;
+        }
+
+        .range-slider::-webkit-slider-thumb:hover {
+            background: var(--primary-hover);
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(96, 165, 250, 0.5);
+        }
+
+        .range-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: var(--primary);
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 6px rgba(96, 165, 250, 0.3);
+            transition: all 0.2s ease;
+        }
+
+        .range-slider::-moz-range-thumb:hover {
+            background: var(--primary-hover);
+            transform: scale(1.1);
+        }
+
+        .slider-value {
+            background: var(--primary);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            min-width: 60px;
+            text-align: center;
+        }
+
         .stats-bar {
             background: var(--surface-2);
             padding: 1rem;
@@ -188,11 +269,20 @@
             border-radius: var(--radius);
             overflow: hidden;
             box-shadow: var(--shadow);
+            position: relative;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            overflow-y: auto;
+            max-height: 70vh;
         }
 
         .media-table {
             width: 100%;
             border-collapse: collapse;
+            table-layout: fixed;
+            min-width: 1400px;
         }
 
         .media-table th {
@@ -204,7 +294,54 @@
             border-bottom: 2px solid var(--border);
             font-size: 0.85rem;
             letter-spacing: 0.3px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            position: relative;
+            user-select: none;
         }
+
+        /* Resizable column headers */
+        .media-table th.resizable {
+            position: relative;
+            min-width: 80px;
+        }
+
+        .media-table th.resizable::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: transparent;
+            cursor: col-resize;
+            user-select: none;
+        }
+
+        .media-table th.resizable:hover::after {
+            background: var(--primary);
+            opacity: 0.5;
+        }
+
+        .media-table th.resizing::after {
+            background: var(--primary);
+            opacity: 0.8;
+        }
+
+        /* Default column widths */
+        .col-title { width: 300px; }
+        .col-series { width: 250px; }
+        .col-season-episode { width: 80px; }
+        .col-type { width: 120px; }
+        .col-availability { width: 140px; }
+        .col-features { width: 200px; }
+        .col-cmaf { width: 100px; }
+        .col-updated { width: 160px; }
+        .col-added { width: 160px; }
+        .col-last-encode { width: 160px; }
+        .col-last-package { width: 160px; }
+        .col-guid { width: 200px; }
 
         .media-table td {
             padding: 0.75rem;
@@ -212,6 +349,9 @@
             color: var(--text);
             vertical-align: top;
             font-size: 0.85rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .media-table tr:hover {
@@ -220,6 +360,99 @@
 
         .media-table tr:last-child td {
             border-bottom: none;
+        }
+
+        /* Expandable content */
+        .expandable-content {
+            position: relative;
+            cursor: pointer;
+        }
+
+        .expandable-content.expanded {
+            white-space: normal;
+            word-wrap: break-word;
+        }
+
+        .expand-icon {
+            position: absolute;
+            right: 4px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            background: var(--primary);
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            color: white;
+            opacity: 0.7;
+            transition: opacity 0.2s ease;
+        }
+
+        .expandable-content:hover .expand-icon {
+            opacity: 1;
+        }
+
+        /* CMAF Toggle Styles */
+        .cmaf-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            transition: background 0.2s ease;
+        }
+
+        .cmaf-toggle:hover {
+            background: color-mix(in oklab, var(--surface-2), var(--primary) 10%);
+        }
+
+        .cmaf-checkbox {
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--border);
+            border-radius: 3px;
+            background: var(--surface-2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .cmaf-checkbox.checked {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .cmaf-checkbox::after {
+            content: '✓';
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .cmaf-checkbox.checked::after {
+            opacity: 1;
+        }
+
+        .cmaf-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            user-select: none;
+        }
+
+        .cmaf-true {
+            color: var(--accent);
+        }
+
+        .cmaf-false {
+            color: var(--text-muted);
         }
 
         .feature-tags {
@@ -236,6 +469,7 @@
             font-size: 0.7rem;
             font-weight: 600;
             letter-spacing: 0.1px;
+            white-space: nowrap;
         }
 
         .content-type-badge {
@@ -245,6 +479,7 @@
             border-radius: 4px;
             font-size: 0.7rem;
             font-weight: 600;
+            white-space: nowrap;
         }
 
         .availability-badge {
@@ -252,6 +487,7 @@
             border-radius: 4px;
             font-size: 0.7rem;
             font-weight: 600;
+            white-space: nowrap;
         }
 
         .availability-badge.available {
@@ -314,11 +550,52 @@
             margin: 1rem 0;
         }
 
-        .truncate {
-            max-width: 200px;
-            white-space: nowrap;
+        .guid-container {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .guid-link {
+            color: var(--primary);
+            text-decoration: none;
+            flex: 1;
             overflow: hidden;
             text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .guid-link:hover {
+            color: var(--primary-hover);
+            text-decoration: underline;
+        }
+
+        .copy-guid-btn {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .copy-guid-btn:hover {
+            background: var(--surface-2);
+            color: var(--text);
+            border-color: var(--primary);
+        }
+
+        .guid-text {
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .date-na {
+            color: var(--text-muted);
+            font-style: italic;
         }
 
         .date-display {
@@ -326,17 +603,22 @@
             color: var(--text-muted);
         }
 
+        /* Column resize indicator */
+        .resize-line {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--primary);
+            opacity: 0.8;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+        }
+
         @media (max-width: 768px) {
             .controls-grid {
                 grid-template-columns: 1fr;
-            }
-
-            .media-table-container {
-                overflow-x: auto;
-            }
-
-            .media-table {
-                min-width: 800px;
             }
 
             .toggle-controls {
@@ -346,6 +628,16 @@
 
             .toggle-group {
                 justify-content: space-between;
+            }
+
+            .horizontal-slider {
+                flex-direction: column;
+                gap: 0.5rem;
+                align-items: stretch;
+            }
+
+            .slider-container {
+                height: 50px;
             }
         }
     </style>
@@ -401,6 +693,15 @@
             </div>
         </div>
 
+        <!-- Horizontal Navigation Slider -->
+        <div class="horizontal-slider">
+            <div class="slider-label">Navigate Records:</div>
+            <div class="slider-container">
+                <input type="range" id="record-slider" class="range-slider" min="1" max="100" value="1">
+            </div>
+            <div class="slider-value" id="slider-value">1 / 100</div>
+        </div>
+
         <div class="toggle-controls">
             <div class="toggle-group">
                 <label>Show Encoded Items Only</label>
@@ -410,6 +711,11 @@
             <div class="toggle-group">
                 <label>Show Repackaged Items Only</label>
                 <div class="toggle" id="repackaged-toggle"></div>
+            </div>
+
+            <div class="toggle-group">
+                <label>Show CMAF Encoded Only</label>
+                <div class="toggle" id="cmaf-toggle"></div>
             </div>
 
             <div class="date-picker">
@@ -445,29 +751,38 @@
             <span class="stat-number" id="repackaged-count">0</span>
             <span class="stat-label">Repackaged</span>
         </div>
+        <div class="stat-item">
+            <span class="stat-number" id="cmaf-count">0</span>
+            <span class="stat-label">CMAF Encoded</span>
+        </div>
     </div>
 
     <div class="media-table-container">
         <div class="loading" id="loading">Loading media data...</div>
         <div class="error" id="error" style="display: none;"></div>
 
-        <table class="media-table" id="media-table" style="display: none;">
-            <thead>
-            <tr>
-                <th>Title</th>
-                <th>Series</th>
-                <th>S/E</th>
-                <th>Type</th>
-                <th>Availability</th>
-                <th>Features</th>
-                <th>Updated</th>
-                <th>Added</th>
-                <th>GUID</th>
-            </tr>
-            </thead>
-            <tbody id="media-tbody">
-            </tbody>
-        </table>
+        <div class="table-wrapper" style="display: none;" id="table-wrapper">
+            <table class="media-table" id="media-table">
+                <thead>
+                <tr>
+                    <th class="resizable col-title" data-column="title">Title</th>
+                    <th class="resizable col-series" data-column="series">Series</th>
+                    <th class="resizable col-season-episode" data-column="season-episode">S/E</th>
+                    <th class="resizable col-type" data-column="type">Type</th>
+                    <th class="resizable col-availability" data-column="availability">Availability</th>
+                    <th class="resizable col-features" data-column="features">Features</th>
+                    <th class="resizable col-cmaf" data-column="cmaf">CMAF</th>
+                    <th class="resizable col-updated" data-column="updated">Updated</th>
+                    <th class="resizable col-added" data-column="added">Added</th>
+                    <th class="resizable col-last-encode" data-column="last-encode">Last Encode</th>
+                    <th class="resizable col-last-package" data-column="last-package">Last Package</th>
+                    <th class="resizable col-guid" data-column="guid">GUID</th>
+                </tr>
+                </thead>
+                <tbody id="media-tbody">
+                </tbody>
+            </table>
+        </div>
 
         <div class="pagination" id="pagination" style="display: none;">
             <button id="prev-btn">Previous</button>
@@ -477,19 +792,30 @@
     </div>
 </div>
 
+<div class="resize-line" id="resize-line"></div>
+
 <script>
     const API_BASE = 'http://localhost:3001/api';
 
     let currentPage = 1;
     let totalPages = 1;
+    let totalItems = 0;
     let isLoading = false;
     let allStats = {};
+    let currentData = [];
+
+    // Column resizing variables
+    let isResizing = false;
+    let currentColumn = null;
+    let startX = 0;
+    let startWidth = 0;
 
     // DOM Elements
     const elements = {
         loading: document.getElementById('loading'),
         error: document.getElementById('error'),
         mediaTable: document.getElementById('media-table'),
+        tableWrapper: document.getElementById('table-wrapper'),
         mediaTbody: document.getElementById('media-tbody'),
         pagination: document.getElementById('pagination'),
         search: document.getElementById('search'),
@@ -500,26 +826,228 @@
         sortOrder: document.getElementById('sort-order'),
         encodedToggle: document.getElementById('encoded-toggle'),
         repackagedToggle: document.getElementById('repackaged-toggle'),
+        cmafToggle: document.getElementById('cmaf-toggle'),
         encodedAfter: document.getElementById('encoded-after'),
         repackagedAfter: document.getElementById('repackaged-after'),
         prevBtn: document.getElementById('prev-btn'),
         nextBtn: document.getElementById('next-btn'),
         pageInfo: document.getElementById('page-info'),
-        totalItems: document.getElementById('total-items'),
+        totalItemsSpan: document.getElementById('total-items'),
         filteredItems: document.getElementById('filtered-items'),
         totalSeries: document.getElementById('total-series'),
         encodedCount: document.getElementById('encoded-count'),
-        repackagedCount: document.getElementById('repackaged-count')
+        repackagedCount: document.getElementById('repackaged-count'),
+        cmafCount: document.getElementById('cmaf-count'),
+        resizeLine: document.getElementById('resize-line'),
+        recordSlider: document.getElementById('record-slider'),
+        sliderValue: document.getElementById('slider-value')
     };
+
+    // Deep linking functionality
+    function createVideoRobotDeeplink(guid) {
+        if (!guid || guid === 'N/A') return null;
+        return `https://videorobot-ent.paramountplus.com/jobs/show_jobs?limit=25&offset=0&order_by=desc&sort_by=id&bu=all&show_qc=true&ref_id=${guid}`;
+    }
+
+    // Render GUID with deeplink
+    function renderGUIDWithLink(guid) {
+        if (!guid || guid === 'N/A') {
+            return `<span class="guid-text">${guid}</span>`;
+        }
+        
+        const deeplink = createVideoRobotDeeplink(guid);
+        const displayGuid = guid.length > 30 ? guid.substring(0, 27) + '...' : guid;
+        
+        return `
+            <div class="guid-container">
+                <a href="${deeplink}" target="_blank" class="guid-link" title="Open in Video Robot (${guid})">
+                    ${displayGuid}
+                </a>
+                <button class="copy-guid-btn" onclick="copyToClipboard('${guid}')" title="Copy GUID">
+                    📋
+                </button>
+            </div>
+        `;
+    }
+
+    // Copy to clipboard functionality
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            // Show temporary success feedback
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = '✓';
+            btn.style.color = 'var(--accent)';
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.style.color = '';
+            }, 1000);
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+        });
+    }
+
+    // Simulate last encode/package dates (in real implementation, these would come from API)
+    function getLastEncodeDate(item) {
+        // This would come from your actual API data
+        // For demo purposes, generating a date based on updated_timestamp
+        if (item.premium_features && item.premium_features.some(f => 
+            f.toLowerCase().includes('encode') || f.toLowerCase().includes('encoded'))) {
+            const baseDate = item.updated_timestamp || Date.now();
+            return baseDate - (Math.random() * 7 * 24 * 60 * 60 * 1000); // Random date within last week
+        }
+        return null;
+    }
+
+    function getLastPackageDate(item) {
+        // This would come from your actual API data
+        // For demo purposes, generating a date based on updated_timestamp
+        if (item.premium_features && item.premium_features.some(f => 
+            f.toLowerCase().includes('repackage') || f.toLowerCase().includes('package'))) {
+            const baseDate = item.updated_timestamp || Date.now();
+            return baseDate - (Math.random() * 5 * 24 * 60 * 60 * 1000); // Random date within last 5 days
+        }
+        return null;
+    }
+
+    // Horizontal slider functionality
+    function initializeHorizontalSlider() {
+        elements.recordSlider.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value);
+            updateSliderDisplay(value);
+
+            // Calculate which page this record would be on (assuming 50 items per page)
+            const itemsPerPage = 50;
+            const targetPage = Math.ceil(value / itemsPerPage);
+
+            if (targetPage !== currentPage && targetPage <= totalPages) {
+                currentPage = targetPage;
+                loadData();
+            }
+        });
+    }
+
+    function updateSliderDisplay(currentValue) {
+        elements.sliderValue.textContent = `${currentValue} / ${totalItems}`;
+    }
+
+    function updateSliderRange(total) {
+        totalItems = total;
+        elements.recordSlider.max = total;
+        elements.recordSlider.value = Math.min(parseInt(elements.recordSlider.value), total);
+        updateSliderDisplay(parseInt(elements.recordSlider.value));
+    }
+
+    // Column resizing functionality
+    function initializeColumnResizing() {
+        const headers = document.querySelectorAll('.media-table th.resizable');
+
+        headers.forEach(header => {
+            header.addEventListener('mousedown', handleMouseDown);
+        });
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    function handleMouseDown(e) {
+        const rect = e.target.getBoundingClientRect();
+        const isRightEdge = e.clientX >= rect.right - 10;
+
+        if (isRightEdge) {
+            e.preventDefault();
+            isResizing = true;
+            currentColumn = e.target;
+            startX = e.clientX;
+            startWidth = parseInt(window.getComputedStyle(currentColumn).width, 10);
+            currentColumn.classList.add('resizing');
+            document.body.style.cursor = 'col-resize';
+            elements.resizeLine.style.display = 'block';
+            elements.resizeLine.style.left = e.clientX + 'px';
+        }
+    }
+
+    function handleMouseMove(e) {
+        if (!isResizing) {
+            // Show resize cursor when hovering over right edge
+            const target = e.target;
+            if (target.classList.contains('resizable')) {
+                const rect = target.getBoundingClientRect();
+                const isRightEdge = e.clientX >= rect.right - 10;
+                target.style.cursor = isRightEdge ? 'col-resize' : 'default';
+            }
+            return;
+        }
+
+        const width = startWidth + (e.clientX - startX);
+        if (width >= 60) { // Minimum column width
+            currentColumn.style.width = width + 'px';
+            elements.resizeLine.style.left = e.clientX + 'px';
+        }
+    }
+
+    function handleMouseUp() {
+        if (isResizing) {
+            isResizing = false;
+            currentColumn.classList.remove('resizing');
+            currentColumn = null;
+            document.body.style.cursor = 'default';
+            elements.resizeLine.style.display = 'none';
+        }
+    }
 
     // Toggle functionality
     function initializeToggles() {
-        [elements.encodedToggle, elements.repackagedToggle].forEach(toggle => {
+        [elements.encodedToggle, elements.repackagedToggle, elements.cmafToggle].forEach(toggle => {
             toggle.addEventListener('click', () => {
                 toggle.classList.toggle('active');
                 loadData();
             });
         });
+    }
+
+    // CMAF Toggle functionality
+    function toggleCMAF(itemId, currentState) {
+        // In a real implementation, this would make an API call to update the database
+        console.log(`Toggle CMAF for item ${itemId}: ${!currentState}`);
+
+        // For demo purposes, we'll just toggle the visual state
+        const checkbox = document.querySelector(`[data-item-id="${itemId}"] .cmaf-checkbox`);
+        const label = document.querySelector(`[data-item-id="${itemId}"] .cmaf-label`);
+
+        if (checkbox && label) {
+            const newState = !currentState;
+            checkbox.classList.toggle('checked', newState);
+            label.textContent = newState ? 'True' : 'False';
+            label.className = `cmaf-label ${newState ? 'cmaf-true' : 'cmaf-false'}`;
+        }
+    }
+
+    // Cell expansion functionality
+    function makeContentExpandable(cellContent, originalText) {
+        if (originalText && originalText.length > 50) {
+            const expandIcon = document.createElement('span');
+            expandIcon.className = 'expand-icon';
+            expandIcon.textContent = '+';
+
+            cellContent.classList.add('expandable-content');
+            cellContent.appendChild(expandIcon);
+
+            cellContent.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isExpanded = cellContent.classList.contains('expanded');
+
+                if (isExpanded) {
+                    cellContent.classList.remove('expanded');
+                    cellContent.firstChild.textContent = originalText.substring(0, 47) + '...';
+                    expandIcon.textContent = '+';
+                } else {
+                    cellContent.classList.add('expanded');
+                    cellContent.firstChild.textContent = originalText;
+                    expandIcon.textContent = '−';
+                }
+            });
+        }
     }
 
     // Date formatting
@@ -551,6 +1079,23 @@
         return `<span class="availability-badge ${className}">${state}</span>`;
     }
 
+    // CMAF toggle rendering
+    function renderCMAFToggle(itemId, features) {
+        // Check if item has CMAF encoding based on features
+        const hasCMAF = features && features.some(f =>
+            f.toLowerCase().includes('cmaf') ||
+            f.toLowerCase().includes('dash') ||
+            f.toLowerCase().includes('hls')
+        );
+
+        return `
+                <div class="cmaf-toggle" data-item-id="${itemId}" onclick="toggleCMAF('${itemId}', ${hasCMAF})">
+                    <div class="cmaf-checkbox ${hasCMAF ? 'checked' : ''}"></div>
+                    <span class="cmaf-label ${hasCMAF ? 'cmaf-true' : 'cmaf-false'}">${hasCMAF ? 'True' : 'False'}</span>
+                </div>
+            `;
+    }
+
     // Load and populate filter dropdowns
     async function loadFilters() {
         try {
@@ -573,8 +1118,11 @@
                     ).join('');
 
                 // Update stats
-                elements.totalItems.textContent = result.data.totalItems.toLocaleString();
+                elements.totalItemsSpan.textContent = result.data.totalItems.toLocaleString();
                 elements.totalSeries.textContent = result.data.totalSeries.toLocaleString();
+
+                // Update slider range
+                updateSliderRange(result.data.totalItems);
             }
         } catch (error) {
             console.error('Error loading filters:', error);
@@ -616,7 +1164,7 @@
         isLoading = true;
         elements.loading.style.display = 'block';
         elements.error.style.display = 'none';
-        elements.mediaTable.style.display = 'none';
+        elements.tableWrapper.style.display = 'none';
         elements.pagination.style.display = 'none';
 
         try {
@@ -627,13 +1175,15 @@
             if (result.success) {
                 totalPages = result.pagination.totalPages;
                 currentPage = result.pagination.currentPage;
+                currentData = result.data;
 
                 renderMediaTable(result.data);
                 updatePagination(result.pagination);
                 updateStats(result.pagination.totalItems);
+                updateSliderForCurrentPage();
 
                 elements.loading.style.display = 'none';
-                elements.mediaTable.style.display = 'table';
+                elements.tableWrapper.style.display = 'block';
                 elements.pagination.style.display = 'flex';
             } else {
                 throw new Error(result.error || 'Failed to load data');
@@ -647,17 +1197,26 @@
         isLoading = false;
     }
 
+    function updateSliderForCurrentPage() {
+        // Update slider position based on current page
+        const itemsPerPage = 50;
+        const startRecord = (currentPage - 1) * itemsPerPage + 1;
+        elements.recordSlider.value = startRecord;
+        updateSliderDisplay(startRecord);
+    }
+
     // Render media table
     function renderMediaTable(data) {
         const encodedOnly = elements.encodedToggle.classList.contains('active');
         const repackagedOnly = elements.repackagedToggle.classList.contains('active');
+        const cmafOnly = elements.cmafToggle.classList.contains('active');
         const encodedAfter = elements.encodedAfter.value ? new Date(elements.encodedAfter.value).getTime() : null;
         const repackagedAfter = elements.repackagedAfter.value ? new Date(elements.repackagedAfter.value).getTime() : null;
 
         let filteredData = data;
 
         // Apply advanced filters
-        if (encodedOnly || repackagedOnly || encodedAfter || repackagedAfter) {
+        if (encodedOnly || repackagedOnly || cmafOnly || encodedAfter || repackagedAfter) {
             filteredData = data.filter(item => {
                 const hasEncoded = item.premium_features && item.premium_features.some(f =>
                     f.toLowerCase().includes('encode') || f.toLowerCase().includes('encoded')
@@ -665,9 +1224,15 @@
                 const hasRepackaged = item.premium_features && item.premium_features.some(f =>
                     f.toLowerCase().includes('repackage') || f.toLowerCase().includes('repackaged')
                 );
+                const hasCMAF = item.premium_features && item.premium_features.some(f =>
+                    f.toLowerCase().includes('cmaf') ||
+                    f.toLowerCase().includes('dash') ||
+                    f.toLowerCase().includes('hls')
+                );
 
                 if (encodedOnly && !hasEncoded) return false;
                 if (repackagedOnly && !hasRepackaged) return false;
+                if (cmafOnly && !hasCMAF) return false;
 
                 if (encodedAfter && (!item.updated_timestamp || item.updated_timestamp < encodedAfter)) return false;
                 if (repackagedAfter && (!item.added_timestamp || item.added_timestamp < repackagedAfter)) return false;
@@ -676,27 +1241,78 @@
             });
         }
 
-        elements.mediaTbody.innerHTML = filteredData.map(item => `
-                <tr>
-                    <td class="truncate" title="${item.title || 'N/A'}">${item.title || 'N/A'}</td>
-                    <td class="truncate" title="${item.series_title || ''}">${item.series_title || ''}</td>
-                    <td>
-                        ${item.season_number ? `S${item.season_number}` : ''}
-                        ${item.episode_number ? `E${item.episode_number}` : ''}
-                    </td>
-                    <td>${renderContentTypeBadge(item.content_type)}</td>
-                    <td>${renderAvailabilityBadge(item.availability_state)}</td>
-                    <td>${renderFeatureTags(item.premium_features)}</td>
-                    <td class="date-display">${formatDate(item.updated_timestamp)}</td>
-                    <td class="date-display">${formatDate(item.added_timestamp)}</td>
-                    <td class="truncate" title="${item.guid || 'N/A'}">${item.guid || 'N/A'}</td>
-                </tr>
-            `).join('');
+        elements.mediaTbody.innerHTML = filteredData.map(item => {
+            const title = item.title || 'N/A';
+            const series = item.series_title || '';
+            const guid = item.guid || 'N/A';
+            const lastEncodeDate = getLastEncodeDate(item);
+            const lastPackageDate = getLastPackageDate(item);
+
+            return `
+                    <tr>
+                        <td class="col-title">
+                            <div class="expandable-content" data-full="${title}">
+                                ${title.length > 50 ? title.substring(0, 47) + '...' : title}
+                            </div>
+                        </td>
+                        <td class="col-series">
+                            <div class="expandable-content" data-full="${series}">
+                                ${series.length > 40 ? series.substring(0, 37) + '...' : series}
+                            </div>
+                        </td>
+                        <td class="col-season-episode">
+                            ${item.season_number ? `S${item.season_number}` : ''}
+                            ${item.episode_number ? `E${item.episode_number}` : ''}
+                        </td>
+                        <td class="col-type">${renderContentTypeBadge(item.content_type)}</td>
+                        <td class="col-availability">${renderAvailabilityBadge(item.availability_state)}</td>
+                        <td class="col-features">${renderFeatureTags(item.premium_features)}</td>
+                        <td class="col-cmaf">${renderCMAFToggle(item.id, item.premium_features)}</td>
+                        <td class="col-updated date-display">${formatDate(item.updated_timestamp)}</td>
+                        <td class="col-added date-display">${formatDate(item.added_timestamp)}</td>
+                        <td class="col-last-encode date-display">
+                            ${lastEncodeDate ? formatDate(lastEncodeDate) : '<span class="date-na">N/A</span>'}
+                        </td>
+                        <td class="col-last-package date-display">
+                            ${lastPackageDate ? formatDate(lastPackageDate) : '<span class="date-na">N/A</span>'}
+                        </td>
+                        <td class="col-guid">${renderGUIDWithLink(guid)}</td>
+                    </tr>
+                `;
+        }).join('');
+
+        // Initialize expandable content
+        document.querySelectorAll('.expandable-content').forEach(element => {
+            const fullText = element.getAttribute('data-full');
+            const currentText = element.textContent;
+
+            if (fullText && fullText.length > currentText.length) {
+                const expandIcon = document.createElement('span');
+                expandIcon.className = 'expand-icon';
+                expandIcon.textContent = '+';
+                element.appendChild(expandIcon);
+
+                element.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const isExpanded = element.classList.contains('expanded');
+
+                    if (isExpanded) {
+                        element.classList.remove('expanded');
+                        element.firstChild.textContent = currentText;
+                        expandIcon.textContent = '+';
+                    } else {
+                        element.classList.add('expanded');
+                        element.firstChild.textContent = fullText;
+                        expandIcon.textContent = '−';
+                    }
+                });
+            }
+        });
 
         if (filteredData.length === 0) {
             elements.mediaTbody.innerHTML = `
                     <tr>
-                        <td colspan="9" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                        <td colspan="12" style="text-align: center; padding: 2rem; color: var(--text-muted);">
                             No media items found matching the current filters.
                         </td>
                     </tr>
@@ -715,7 +1331,7 @@
     function updateStats(filteredCount) {
         elements.filteredItems.textContent = filteredCount.toLocaleString();
 
-        // Calculate encoded/repackaged counts (this would need server-side support for accuracy)
+        // Calculate encoded/repackaged/CMAF counts
         if (allStats.premiumFeatures) {
             const encodedFeature = allStats.premiumFeatures.find(f =>
                 f.feature && f.feature.toLowerCase().includes('encode')
@@ -723,9 +1339,15 @@
             const repackagedFeature = allStats.premiumFeatures.find(f =>
                 f.feature && f.feature.toLowerCase().includes('repackage')
             );
+            const cmafFeature = allStats.premiumFeatures.find(f =>
+                f.feature && (f.feature.toLowerCase().includes('cmaf') ||
+                    f.feature.toLowerCase().includes('dash') ||
+                    f.feature.toLowerCase().includes('hls'))
+            );
 
             elements.encodedCount.textContent = encodedFeature ? encodedFeature.count.toLocaleString() : '0';
             elements.repackagedCount.textContent = repackagedFeature ? repackagedFeature.count.toLocaleString() : '0';
+            elements.cmafCount.textContent = cmafFeature ? cmafFeature.count.toLocaleString() : '0';
         }
     }
 
@@ -778,6 +1400,8 @@
     // Initialize dashboard
     async function initialize() {
         initializeToggles();
+        initializeColumnResizing();
+        initializeHorizontalSlider();
         setupEventListeners();
         await loadFilters();
         await loadData();
@@ -785,6 +1409,10 @@
 
     // Start the dashboard
     initialize();
+
+    // Make functions globally available for onclick handlers
+    window.toggleCMAF = toggleCMAF;
+    window.copyToClipboard = copyToClipboard;
 </script>
 </body>
 </html>

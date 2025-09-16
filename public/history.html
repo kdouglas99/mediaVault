@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>History Admin - Media Vault</title>
+    <style>
+        /* Design tokens matching App.css */
+        :root {
+            --bg: #0f172a;
+            --surface: #111827;
+            --surface-2: #0b1220;
+            --text: #ffffff;
+            --text-muted: rgba(255,255,255,0.75);
+            --border: #1f2937;
+            --primary: #60a5fa;
+            --primary-hover: #3b82f6;
+            --accent: #34d399;
+            --accent-hover: #10b981;
+            --danger: #f87171;
+            --danger-hover: #ef4444;
+            --warning: #fbbf24;
+            --info: #0ea5e9;
+            --shadow: 0 10px 30px rgba(0,0,0,0.35);
+            --radius: 12px;
+            --focus: 0 0 0 3px rgba(96,165,250,0.35);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            background: radial-gradient(1200px 600px at 10% -10%, rgba(59,130,246,0.10), rgba(0,0,0,0) 40%),
+            radial-gradient(900px 600px at 110% 10%, rgba(16,185,129,0.10), rgba(0,0,0,0) 35%),
+            var(--bg);
+            color: var(--text);
+            font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+            min-height: 100vh;
+            padding: 2rem 1.25rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        h1 {
+            font-size: clamp(1.6rem, 2.4vw, 2.25rem);
+            font-weight: 800;
+            letter-spacing: 0.2px;
+            color: var(--text);
+            text-shadow: 0 1px 0 rgba(0,0,0,0.15);
+            margin: 0;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .nav-link {
+            background: var(--surface);
+            color: var(--text);
+            text-decoration: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .nav-link:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .history-controls {
+            background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02)), var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow);
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .control-group label {
+            font-weight: 600;
+            color: var(--text);
+            font-size: 0.9rem;
+        }
+
+        .control-group input,
+        .control-group select {
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            background: var(--surface-2);
+            color: var(--text);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: border-color 0.2s ease, background 0.2s ease;
+        }
+
+        .control-group input:focus,
+        .control-group select:focus {
+            outline: none;
+            box-shadow: var(--focus);
+            border-color: var(--primary);
+            background: color-mix(in oklab, var(--surface-2), var(--primary) 6%);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: var(--danger-hover);
+        }
+
+        .btn-secondary {
+            background: var(--surface-2);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+
+        .stats-bar {
+            background: var(--surface-2);
+            padding: 1rem;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .history-container {
+            background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02)), var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        .timeline {
+            max-height: 70vh;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+
+        .timeline-item {
+            display: flex;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: 24px;
+            top: 50px;
+            bottom: -30px;
+            width: 2px;
+            background: var(--border);
+        }
+
+        .timeline-item:last-child::before {
+            display: none;
+        }
+
+        .timeline-marker {
+            flex-shrink: 0;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            margin-right: 1rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        .timeline-marker.create {
+            background: var(--accent);
+            color: white;
+        }
+
+        .timeline-marker.update {
+            background: var(--primary);
+            color: white;
+        }
+
+        .timeline-marker.delete {
+            background: var(--danger);
+            color: white;
+        }
+
+        .timeline-marker.toggle {
+            background: var(--warning);
+            color: white;
+        }
+
+        .timeline-marker.import {
+            background: var(--info);
+            color: white;
+        }
+
+        .timeline-content {
+            flex: 1;
+            background: var(--surface-2);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+        }
+
+        .timeline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .timeline-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text);
+            margin: 0;
+        }
+
+        .timeline-meta {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.25rem;
+        }
+
+        .timeline-time {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .timeline-user {
+            background: var(--primary);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .timeline-description {
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+            line-height: 1.5;
+        }
+
+        .change-details {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .change-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+
+        .change-field {
+            background: var(--surface);
+            padding: 0.75rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+        }
+
+        .field-name {
+            font-weight: 600;
+            color: var(--text);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .field-change {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .field-old {
+            color: var(--danger);
+            font-family: monospace;
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+            background: color-mix(in oklab, var(--danger), transparent 90%);
+            border-radius: 4px;
+        }
+
+        .field-new {
+            color: var(--accent);
+            font-family: monospace;
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+            background: color-mix(in oklab, var(--accent), transparent 90%);
+            border-radius: 4px;
+        }
+
+        .field-old::before {
+            content: '− ';
+            font-weight: bold;
+        }
+
+        .field-new::before {
+            content: '+ ';
+            font-weight: bold;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.5rem;
+            background: var(--surface-2);
+        }
+
+        .pagination button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s ease;
+        }
+
+        .pagination button:hover:not(:disabled) {
+            background: var(--primary-hover);
+        }
+
+        .pagination button:disabled {
+            background: #6b7280;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+        }
+
+        .error {
+            background: #7f1d1d;
+            border: 1px solid var(--danger);
+            color: var(--text);
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state h3 {
+            color: var(--text);
+            margin-bottom: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .controls-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .timeline-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .timeline-marker {
+                margin-bottom: 1rem;
+                margin-right: 0;
+            }
+
+            .timeline-item::before {
+                left: 24px;
+                top: 48px;
+            }
+
+            .change-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .nav-links {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>📋 History Admin</h1>
+        <div class="nav-links">
+            <a href="/" class="nav-link">🏠 Main App</a>
+            <a href="/dashboard.html" class="nav-link">📊 Dashboard</a>
+        </div>
+    </div>
+
+    <div class="history-controls">
+        <div class="controls-grid">
+            <div class="control-group">
+                <label for="date-from">From Date</label>
+                <input type="datetime-local" id="date-from">
+            </div>
+
+            <div class="control-group">
+                <label for="date-to">To Date</label>
+                <input type="datetime-local" id="date-to">
+            </div>
+
+            <div class="control-group">
+                <label for="action-filter">Action Type</label>
+                <select id="action-filter">
+                    <option value="">All Actions</option>
+                    <option value="create">Create</option>
+                    <option value="update">Update</option>
+                    <option value="delete">Delete</option>
+                    <option value="toggle">Toggle</option>
+                    <option value="import">Import</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="user-filter">User</label>
+                <select id="user-filter">
+                    <option value="">All Users</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="entity-filter">Entity Type</label>
+                <select id="entity-filter">
+                    <option value="">All Entities</option>
+                    <option value="media_item">Media Item</option>
+                    <option value="user_preference">User Preference</option>
+                    <option value="system_setting">System Setting</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="search-changes">Search Changes</label>
+                <input type="text" id="search-changes" placeholder="Search in change descriptions...">
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button class="btn btn-primary" id="refresh-btn">🔄 Refresh</button>
+            <button class="btn btn-secondary" id="export-btn">📥 Export History</button>
+            <button class="btn btn-danger" id="clear-filters-btn">🗑️ Clear Filters</button>
+            <div style="flex: 1;"></div>
+            <span id="auto-refresh-status" class="timeline-time">Auto-refresh: OFF</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="auto-refresh-toggle">
+                <span class="slider"></span>
+            </label>
+        </div>
+    </div>
+
+    <div class="stats-bar">
+        <div class="stat-item">
+            <span class="stat-number" id="total-changes">0</span>
+            <span class="stat-label">Total Changes</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-number" id="today-changes">0</span>
+            <span class="stat-label">Today</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-number" id="week-changes">0</span>
+            <span class="stat-label">This Week</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-number" id="active-users">0</span>
+            <span class="stat-label">Active Users</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-number" id="most-changed">-</span>
+            <span class="stat-label">Most Changed Entity</span>
+        </div>
+    </div>
+
+    <div class="history-container">
+        <div class="loading" id="loading">Loading history data...</div>
+        <div class="error" id="error" style="display: none;"></div>
+
+        <div class="timeline" id="timeline" style="display: none;">
+            <!-- Timeline items will be populated here -->
+        </div>
+
+        <div class="pagination" id="pagination" style="display: none;">
+            <button id="prev-btn">Previous</button>
+            <span id="page-info">Page 1 of 1</span>
+            <button id="next-btn">Next</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_BASE = 'http://localhost:3001/api';
+
+    let currentPage = 1;
+    let totalPages = 1;
+    let isLoading = false;
+    let autoRefreshInterval = null;
+
+    // DOM Elements
+    const elements = {
+        loading: document.getElementById('loading'),
+        error: document.getElementById('error'),
+        timeline: document.getElementById('timeline'),
+        pagination: document.getElementById('pagination'),
+        dateFrom: document.getElementById('date-from'),
+        dateTo: document.getElementById('date-to'),
+        actionFilter: document.getElementById('action-filter'),
+        userFilter: document.getElementById('user-filter'),
+        entityFilter: document.getElementById('entity-filter'),
+        searchChanges: document.getElementById('search-changes'),
+        refreshBtn: document.getElementById('refresh-btn'),
+        exportBtn: document.getElementById('export-btn'),
+        clearFiltersBtn: document.getElementById('clear-filters-btn'),
+        autoRefreshToggle: document.getElementById('auto-refresh-toggle'),
+        autoRefreshStatus: document.getElementById('auto-refresh-status'),
+        prevBtn: document.getElementById('prev-btn'),
+        nextBtn: document.getElementById('next-btn'),
+        pageInfo: document.getElementById('page-info'),
+        totalChanges: document.getElementById('total-changes'),
+        todayChanges: document.getElementById('today-changes'),
+        weekChanges: document.getElementById('week-changes'),
+        activeUsers: document.getElementById('active-users'),
+        mostChanged: document.getElementById('most-changed')
+    };
+
+    // Mock data generator (in real implementation, this would come from API)
+    function generateMockHistoryData() {
+        const actions = ['create', 'update', 'delete', 'toggle', 'import'];
+        const users = ['admin', 'editor', 'viewer', 'system'];
+        const entities = ['media_item', 'user_preference', 'system_setting'];
+
+        const data = [];
+        const now = new Date();
+
+        for (let i = 0; i < 50; i++) {
+            const action = actions[Math.floor(Math.random() * actions.length)];
+            const user = users[Math.floor(Math.random() * users.length)];
+            const entity = entities[Math.floor(Math.random() * entities.length)];
+
+            const timestamp = new Date(now - Math.random() * 7 * 24 * 60 * 60 * 1000);
+
+            const changes = {};
+            if (action === 'update') {
+                changes['title'] = {
+                    old: 'Old Movie Title ' + i,
+                    new: 'New Movie Title ' + i
+                };
+                changes['cmaf_encoded'] = {
+                    old: false,
+                    new: true
+                };
+            }
+
+            data.push({
+                id: i + 1,
+                action: action,
+                entity_type: entity,
+                entity_id: Math.floor(Math.random() * 1000) + 1,
+                user: user,
+                timestamp: timestamp.getTime(),
+                description: `${action.charAt(0).toUpperCase() + action.slice(1)} ${entity.replace('_', ' ')} #${Math.floor(Math.random() * 1000) + 1}`,
+                changes: changes,
+                ip_address: `192.168.1.${Math.floor(Math.random() * 255)}`,
+                user_agent: 'Mozilla/5.0 (compatible; MediaVault/1.0)'
+            });
+        }
+
+        return data.sort((a, b) => b.timestamp - a.timestamp);
+    }
+
+    // Format timestamp
+    function formatTimestamp(timestamp) {
+        const date = new Date(timestamp);
+        const now = new Date();
+        const diff = now - date;
+
+        if (diff < 60000) { // Less than 1 minute
+            return 'Just now';
+        } else if (diff < 3600000) { // Less than 1 hour
+            return `${Math.floor(diff / 60000)} minutes ago`;
+        } else if (diff < 86400000) { // Less than 1 day
+            return `${Math.floor(diff / 3600000)} hours ago`;
+        } else {
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+        }
+    }
+
+    // Get action icon
+    function getActionIcon(action) {
+        const icons = {
+            'create': '➕',
+            'update': '✏️',
+            'delete': '🗑️',
+            'toggle': '🔄',
+            'import': '📥'
+        };
+        return icons[action] || '❓';
+    }
+
+    // Render change details
+    function renderChangeDetails(changes) {
+        if (!changes || Object.keys(changes).length === 0) {
+            return '';
+        }
+
+        const changeFields = Object.entries(changes).map(([field, change]) => `
+                <div class="change-field">
+                    <div class="field-name">${field.replace('_', ' ')}</div>
+                    <div class="field-change">
+                        <div class="field-old">${change.old}</div>
+                        <div class="field-new">${change.new}</div>
+                    </div>
+                </div>
+            `).join('');
+
+        return `
+                <div class="change-details">
+                    <div class="change-grid">
+                        ${changeFields}
+                    </div>
+                </div>
+            `;
+    }
+
+    // Render timeline
+    function renderTimeline(data) {
+        if (data.length === 0) {
+            elements.timeline.innerHTML = `
+                    <div class="empty-state">
+                        <h3>No History Found</h3>
+                        <p>No changes match your current filters.</p>
+                    </div>
+                `;
+            return;
+        }
+
+        elements.timeline.innerHTML = data.map(item => `
+                <div class="timeline-item">
+                    <div class="timeline-marker ${item.action}">
+                        ${getActionIcon(item.action)}
+                    </div>
+                    <div class="timeline-content">
+                        <div class="timeline-header">
+                            <h3 class="timeline-title">${item.description}</h3>
+                            <div class="timeline-meta">
+                                <div class="timeline-time">${formatTimestamp(item.timestamp)}</div>
+                                <div class="timeline-user">${item.user}</div>
+                            </div>
+                        </div>
+                        <div class="timeline-description">
+                            ${item.action.charAt(0).toUpperCase() + item.action.slice(1)} operation on ${item.entity_type.replace('_', ' ')} #${item.entity_id}
+                            <br><strong>IP:</strong> ${item.ip_address}
+                        </div>
+                        ${renderChangeDetails(item.changes)}
+                    </div>
+                </div>
+            `).join('');
+    }
+
+    // Apply filters to data
+    function applyFilters(data) {
+        let filtered = [...data];
+
+        // Date filters
+        if (elements.dateFrom.value) {
+            const fromDate = new Date(elements.dateFrom.value).getTime();
+            filtered = filtered.filter(item => item.timestamp >= fromDate);
+        }
+
+        if (elements.dateTo.value) {
+            const toDate = new Date(elements.dateTo.value).getTime();
+            filtered = filtered.filter(item => item.timestamp <= toDate);
+        }
+
+        // Action filter
+        if (elements.actionFilter.value) {
+            filtered = filtered.filter(item => item.action === elements.actionFilter.value);
+        }
+
+        // User filter
+        if (elements.userFilter.value) {
+            filtered = filtered.filter(item => item.user === elements.userFilter.value);
+        }
+
+        // Entity filter
+        if (elements.entityFilter.value) {
+            filtered = filtered.filter(item => item.entity_type === elements.entityFilter.value);
+        }
+
+        // Search filter
+        if (elements.searchChanges.value) {
+            const searchTerm = elements.searchChanges.value.toLowerCase();
+            filtered = filtered.filter(item =>
+                item.description.toLowerCase().includes(searchTerm) ||
+                JSON.stringify(item.changes).toLowerCase().includes(searchTerm)
+            );
+        }
+
+        return filtered;
+    }
+
+    // Update stats
+    function updateStats(data) {
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        const weekStart = new Date(now - 7 * 24 * 60 * 60 * 1000).getTime();
+
+        const todayChanges = data.filter(item => item.timestamp >= todayStart).length;
+        const weekChanges = data.filter(item => item.timestamp >= weekStart).length;
+        const activeUsers = [...new Set(data.filter(item => item.timestamp >= weekStart).map(item => item.user))].length;
+
+        // Find most changed entity type
+        const entityCounts = {};
+        data.forEach(item => {
+            entityCounts[item.entity_type] = (entityCounts[item.entity_type] || 0) + 1;
+        });
+        const mostChanged = Object.entries(entityCounts).sort(([,a], [,b]) => b - a)[0];
+
+        elements.totalChanges.textContent = data.length.toLocaleString();
+        elements.todayChanges.textContent = todayChanges.toLocaleString();
+        elements.weekChanges.textContent = weekChanges.toLocaleString();
+        elements.activeUsers.textContent = activeUsers.toLocaleString();
+        elements.mostChanged.textContent = mostChanged ? mostChanged[0].replace('_', ' ') : '-';
+    }
+
+    // Load history data
+    function loadHistory() {
+        if (isLoading) return;
+
+        isLoading = true;
+        elements.loading.style.display = 'block';
+        elements.error.style.display = 'none';
+        elements.timeline.style.display = 'none';
+        elements.pagination.style.display = 'none';
+
+        // In real implementation, this would be an API call
+        setTimeout(() => {
+            try {
+                const allData = generateMockHistoryData();
+                const filteredData = applyFilters(allData);
+
+                // Pagination
+                const itemsPerPage = 10;
+                const startIndex = (currentPage - 1) * itemsPerPage;
+                const endIndex = startIndex + itemsPerPage;
+                const pageData = filteredData.slice(startIndex, endIndex);
+
+                totalPages = Math.ceil(filteredData.length / itemsPerPage);
+
+                renderTimeline(pageData);
+                updateStats(allData);
+                updatePagination();
+                populateUserFilter(allData);
+
+                elements.loading.style.display = 'none';
+                elements.timeline.style.display = 'block';
+                elements.pagination.style.display = 'flex';
+            } catch (error) {
+                elements.loading.style.display = 'none';
+                elements.error.style.display = 'block';
+                elements.error.textContent = 'Error loading history: ' + error.message;
+            }
+
+            isLoading = false;
+        }, 1000);
+    }
+
+    // Populate user filter dropdown
+    function populateUserFilter(data) {
+        const users = [...new Set(data.map(item => item.user))].sort();
+        elements.userFilter.innerHTML = '<option value="">All Users</option>' +
+            users.map(user => `<option value="${user}">${user}</option>`).join('');
+    }
+
+    // Update pagination
+    function updatePagination() {
+        elements.pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+        elements.prevBtn.disabled = currentPage <= 1;
+        elements.nextBtn.disabled = currentPage >= totalPages;
+    }
+
+    // Auto refresh functionality
+    function toggleAutoRefresh() {
+        if (elements.autoRefreshToggle.checked) {
+            autoRefreshInterval = setInterval(loadHistory, 30000); // 30 seconds
+            elements.autoRefreshStatus.textContent = 'Auto-refresh: ON (30s)';
+        } else {
+            clearInterval(autoRefreshInterval);
+            autoRefreshInterval = null;
+            elements.autoRefreshStatus.textContent = 'Auto-refresh: OFF';
+        }
+    }
+
+    // Export history
+    function exportHistory() {
+        // In real implementation, this would make an API call to export data
+        const data = generateMockHistoryData();
+        const filteredData = applyFilters(data);
+
+        const csv = [
+            ['Timestamp', 'Action', 'Entity Type', 'Entity ID', 'User', 'Description', 'IP Address'],
+            ...filteredData.map(item => [
+                new Date(item.timestamp).toISOString(),
+                item.action,
+                item.entity_type,
+                item.entity_id,
+                item.user,
+                item.description,
+                item.ip_address
+            ])
+        ].map(row => row.join(',')).join('\n');
+
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `history_export_${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+    }
+
+    // Clear filters
+    function clearFilters() {
+        elements.dateFrom.value = '';
+        elements.dateTo.value = '';
+        elements.actionFilter.value = '';
+        elements.userFilter.value = '';
+        elements.entityFilter.value = '';
+        elements.searchChanges.value = '';
+        currentPage = 1;
+        loadHistory();
+    }
+
+    // Setup event listeners
+    function setupEventListeners() {
+        // Filter inputs
+        [elements.dateFrom, elements.dateTo, elements.actionFilter, elements.userFilter, elements.entityFilter].forEach(input => {
+            input.addEventListener('change', () => {
+                currentPage = 1;
+                loadHistory();
+            });
+        });
+
+        // Search input with debounce
+        let searchTimeout;
+        elements.searchChanges.addEventListener('input', () => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                currentPage = 1;
+                loadHistory();
+            }, 500);
+        });
+
+        // Action buttons
+        elements.refreshBtn.addEventListener('click', loadHistory);
+        elements.exportBtn.addEventListener('click', exportHistory);
+        elements.clearFiltersBtn.addEventListener('click', clearFilters);
+        elements.autoRefreshToggle.addEventListener('change', toggleAutoRefresh);
+
+        // Pagination
+        elements.prevBtn.addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                loadHistory();
+            }
+        });
+
+        elements.nextBtn.addEventListener('click', () => {
+            if (currentPage < totalPages) {
+                currentPage++;
+                loadHistory();
+            }
+        });
+    }
+
+    // Initialize
+    function initialize() {
+        setupEventListeners();
+        loadHistory();
+    }
+
+    // Start the history admin
+    initialize();
+</script>
+</body>
+</html>
