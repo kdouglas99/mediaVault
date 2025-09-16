@@ -338,6 +338,78 @@
             background: var(--danger-hover);
         }
 
+        /* Selection and Export Controls */
+        .selection-controls {
+            background: var(--surface-2);
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .selection-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .selection-count {
+            background: var(--primary);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .selection-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .select-all-btn,
+        .clear-selection-btn,
+        .export-csv-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .select-all-btn:hover,
+        .export-csv-btn:hover {
+            background: var(--primary-hover);
+        }
+
+        .clear-selection-btn {
+            background: var(--danger);
+        }
+
+        .clear-selection-btn:hover {
+            background: var(--danger-hover);
+        }
+
+        .export-csv-btn {
+            background: var(--accent);
+        }
+
+        .export-csv-btn:hover {
+            background: var(--accent-hover);
+        }
+
         /* Stats Bar */
         .stats-bar {
             background: var(--surface-2);
@@ -388,7 +460,7 @@
             width: 100%;
             border-collapse: collapse;
             table-layout: fixed;
-            min-width: 1600px;
+            min-width: 1700px;
         }
 
         /* Resizable column headers */
@@ -445,8 +517,6 @@
             vertical-align: top;
             font-size: 0.85rem;
             overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
         }
 
         .media-table td:last-child {
@@ -456,6 +526,13 @@
         .media-table tr:hover {
             background: color-mix(in oklab, var(--surface), var(--primary) 4%);
         }
+
+        .media-table tr.selected {
+            background: color-mix(in oklab, var(--surface), var(--primary) 12%);
+        }
+
+        /* Selection checkbox column */
+        .col-select { width: 50px; }
 
         /* Column widths - dynamic */
         .col-title { width: 280px; }
@@ -468,6 +545,12 @@
         .col-cmaf { width: 100px; }
         .col-updated { width: 160px; }
         .col-guid { width: 200px; }
+
+        /* Row selection checkbox */
+        .row-select {
+            accent-color: var(--primary);
+            transform: scale(1.2);
+        }
 
         /* Resize indicator line */
         .resize-line {
@@ -749,6 +832,11 @@
             .pagination-controls button {
                 width: 100%;
             }
+
+            .selection-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
         }
     </style>
 </head>
@@ -841,17 +929,6 @@
                 </div>
 
                 <div class="filter-group">
-                    <label>🎥 Streaming Properties</label>
-                    <div class="multi-select-container">
-                        <button class="multi-select-button" data-filter="streamingProperties">
-                            <span>Select properties...</span>
-                            <span>▼</span>
-                        </button>
-                        <div class="multi-select-dropdown"></div>
-                    </div>
-                </div>
-
-                <div class="filter-group">
                     <label>📦 CMAF</label>
                     <div class="multi-select-container">
                         <button class="multi-select-button" data-filter="cmaf">
@@ -891,6 +968,19 @@
         </div>
     </div>
 
+    <!-- Selection and Export Controls -->
+    <div class="selection-controls">
+        <div class="selection-info">
+            <span>📋 Selection:</span>
+            <span class="selection-count" id="selection-count">0 selected</span>
+        </div>
+        <div class="selection-actions">
+            <button class="select-all-btn" id="select-all-btn">✅ Select All</button>
+            <button class="clear-selection-btn" id="clear-selection-btn">❌ Clear Selection</button>
+            <button class="export-csv-btn" id="export-csv-btn">📊 Export to CSV</button>
+        </div>
+    </div>
+
     <!-- Stats Bar -->
     <div class="stats-bar">
         <div class="stat-item">
@@ -924,13 +1014,15 @@
             <table class="media-table" id="media-table">
                 <thead>
                 <tr>
+                    <th class="col-select">
+                        <input type="checkbox" id="select-all-checkbox" class="row-select">
+                    </th>
                     <th class="col-title resizable" data-column="title">Title</th>
                     <th class="col-series resizable" data-column="series">Series</th>
                     <th class="col-season-episode resizable" data-column="season-episode">S/E</th>
                     <th class="col-type resizable" data-column="type">Type</th>
                     <th class="col-availability resizable" data-column="availability">Availability</th>
                     <th class="col-features resizable" data-column="features">Features</th>
-                    <th class="col-streaming-properties resizable" data-column="streaming-properties">Streaming Properties</th>
                     <th class="col-cmaf resizable" data-column="cmaf">CMAF</th>
                     <th class="col-updated resizable" data-column="updated">Updated</th>
                     <th class="col-guid" data-column="guid">GUID</th>
@@ -969,7 +1061,9 @@
     let totalItems = 0;
     let isLoading = false;
     let currentData = [];
+    let filteredData = [];
     let allStats = {};
+    let selectedRows = new Set();
 
     // Column resizing variables
     let isResizing = false;
@@ -983,7 +1077,6 @@
         contentType: new Set(),
         availability: new Set(),
         features: new Set(),
-        streamingProperties: new Set(),
         cmaf: new Set(),
         season: new Set(),
         episode: new Set()
@@ -1010,12 +1103,6 @@
             field: 'premium_features',
             label: 'Features',
             icon: '⭐',
-            isArray: true
-        },
-        streamingProperties: {
-            field: 'streaming_properties',
-            label: 'Streaming Properties',
-            icon: '🎥',
             isArray: true
         },
         cmaf: {
@@ -1058,8 +1145,181 @@
         encodedCount: document.getElementById('encoded-count'),
         activeFilters: document.getElementById('active-filters'),
         clearAllFilters: document.getElementById('clear-all-filters'),
-        resizeLine: document.getElementById('resize-line')
+        resizeLine: document.getElementById('resize-line'),
+        selectAllCheckbox: document.getElementById('select-all-checkbox'),
+        selectionCount: document.getElementById('selection-count'),
+        selectAllBtn: document.getElementById('select-all-btn'),
+        clearSelectionBtn: document.getElementById('clear-selection-btn'),
+        exportCsvBtn: document.getElementById('export-csv-btn')
     };
+
+    // Get unique identifier for a row
+    function getRowId(item) {
+        return item.external_id || item.id || item.guid || `row_${Math.random().toString(36).substr(2, 9)}`;
+    }
+
+    // Selection functionality
+    function initializeSelection() {
+        elements.selectAllCheckbox.addEventListener('change', handleSelectAll);
+        elements.selectAllBtn.addEventListener('click', selectAllVisible);
+        elements.clearSelectionBtn.addEventListener('click', clearSelection);
+        elements.exportCsvBtn.addEventListener('click', exportToCsv);
+    }
+
+    function handleSelectAll(e) {
+        const isChecked = e.target.checked;
+        if (isChecked) {
+            selectAllVisible();
+        } else {
+            clearSelection();
+        }
+    }
+
+    function selectAllVisible() {
+        // Clear existing selections first to avoid conflicts
+        selectedRows.clear();
+
+        // Add all visible items to selection
+        filteredData.forEach(item => {
+            selectedRows.add(getRowId(item));
+        });
+
+        updateSelectionUI();
+    }
+
+    function clearSelection() {
+        selectedRows.clear();
+        updateSelectionUI();
+    }
+
+    function toggleRowSelection(id) {
+        if (selectedRows.has(id)) {
+            selectedRows.delete(id);
+        } else {
+            selectedRows.add(id);
+        }
+        updateSelectionUI();
+    }
+
+    function updateSelectionUI() {
+        const count = selectedRows.size;
+        elements.selectionCount.textContent = `${count} selected`;
+
+        // Update header checkbox state
+        const totalVisible = filteredData.length;
+        const selectedVisibleIds = filteredData.map(item => getRowId(item));
+        const selectedVisible = selectedVisibleIds.filter(id => selectedRows.has(id)).length;
+
+        if (selectedVisible === 0) {
+            elements.selectAllCheckbox.checked = false;
+            elements.selectAllCheckbox.indeterminate = false;
+        } else if (selectedVisible === totalVisible && totalVisible > 0) {
+            elements.selectAllCheckbox.checked = true;
+            elements.selectAllCheckbox.indeterminate = false;
+        } else {
+            elements.selectAllCheckbox.checked = false;
+            elements.selectAllCheckbox.indeterminate = true;
+        }
+
+        // Update row checkboxes and highlighting
+        document.querySelectorAll('.media-table tbody tr').forEach(row => {
+            const checkbox = row.querySelector('.row-checkbox');
+            if (checkbox) {
+                const id = checkbox.getAttribute('data-id');
+                checkbox.checked = selectedRows.has(id);
+
+                if (selectedRows.has(id)) {
+                    row.classList.add('selected');
+                } else {
+                    row.classList.remove('selected');
+                }
+            }
+        });
+    }
+
+    // CSV Export functionality
+    function exportToCsv() {
+        const dataToExport = filteredData;
+
+        if (dataToExport.length === 0) {
+            alert('No data to export');
+            return;
+        }
+
+        const headers = [
+            'Title',
+            'Series',
+            'Season',
+            'Episode',
+            'Content Type',
+            'Availability',
+            'Features',
+            'CMAF Status',
+            'Updated',
+            'GUID'
+        ];
+
+        const csvContent = [
+            headers.join(','),
+            ...dataToExport.map(item => [
+                escapeCSV(item.title || ''),
+                escapeCSV(item.series_title || ''),
+                item.season_number || '',
+                item.episode_number || '',
+                escapeCSV(item.content_type || ''),
+                escapeCSV(item.availability_state || ''),
+                escapeCSV((item.premium_features || []).join('; ')),
+                getCMAFStatus(item),
+                formatDateForCSV(item.updated_timestamp),
+                escapeCSV(item.guid || '')
+            ].join(','))
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `media_export_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    function escapeCSV(str) {
+        if (str === null || str === undefined) return '';
+        str = str.toString();
+        if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+            return '"' + str.replace(/"/g, '""') + '"';
+        }
+        return str;
+    }
+
+    function formatDateForCSV(timestamp) {
+        if (!timestamp) return '';
+        const date = new Date(parseInt(timestamp));
+        return date.toISOString();
+    }
+
+    // Dynamic feature rendering based on column width
+    function renderFeatureTags(features, columnWidth) {
+        if (!features || features.length === 0) return '<span style="color: var(--text-muted);">N/A</span>';
+
+        const tagWidth = 60;
+        const maxTags = Math.max(1, Math.floor((columnWidth - 20) / tagWidth));
+        const visibleFeatures = features.slice(0, maxTags);
+        const remainingCount = features.length - visibleFeatures.length;
+
+        let html = `<div class="feature-tags">`;
+        html += visibleFeatures.map(feature => `<span class="feature-tag">${feature}</span>`).join('');
+
+        if (remainingCount > 0) {
+            html += `<span style="color: var(--text-muted); font-size: 0.7rem;">+${remainingCount}</span>`;
+        }
+        html += '</div>';
+
+        return html;
+    }
 
     // Initialize column header resizing
     function initializeColumnResizing() {
@@ -1111,7 +1371,6 @@
             currentColumn.style.width = clampedWidth + 'px';
             elements.resizeLine.style.left = e.clientX + 'px';
 
-            // Update all elements with the same column class
             const columnName = currentColumn.getAttribute('data-column');
             updateColumnWidth(columnName, clampedWidth);
         }
@@ -1121,6 +1380,11 @@
         if (isResizing) {
             isResizing = false;
             currentColumn.classList.remove('resizing');
+
+            if (currentColumn.getAttribute('data-column') === 'features') {
+                renderMediaTable(filteredData);
+            }
+
             currentColumn = null;
             document.body.style.cursor = 'default';
             document.body.style.userSelect = 'auto';
@@ -1130,9 +1394,9 @@
 
     function updateColumnWidth(columnName, width) {
         const className = `.col-${columnName}`;
-        const elements = document.querySelectorAll(className);
+        const elementsToUpdate = document.querySelectorAll(className);
 
-        elements.forEach(element => {
+        elementsToUpdate.forEach(element => {
             element.style.width = `${width}px`;
         });
     }
@@ -1143,7 +1407,6 @@
         return `https://videorobot-ent.paramountplus.com/jobs/show_jobs?limit=25&offset=0&order_by=desc&sort_by=id&bu=all&show_qc=true&ref_id=${guid}`;
     }
 
-    // Render GUID with deeplink
     function renderGUIDWithLink(guid) {
         if (!guid || guid === 'N/A') {
             return `<span class="guid-text">${guid}</span>`;
@@ -1164,7 +1427,6 @@
         `;
     }
 
-    // Copy to clipboard functionality
     function copyToClipboard(text, buttonElement) {
         navigator.clipboard.writeText(text).then(() => {
             const originalText = buttonElement.textContent;
@@ -1180,24 +1442,14 @@
         });
     }
 
-    // Helper function to determine CMAF status
     function getCMAFStatus(item) {
         const features = item.premium_features || [];
-        const streamingProps = item.streaming_properties || [];
-
         const hasCMAFFeatures = features.some(f =>
             f.toLowerCase().includes('cmaf') ||
             f.toLowerCase().includes('dash') ||
             f.toLowerCase().includes('hls')
         );
-
-        const hasCMAFStreaming = streamingProps.some(p =>
-            p.toLowerCase().includes('cmaf') ||
-            p.toLowerCase().includes('dash') ||
-            p.toLowerCase().includes('hls')
-        );
-
-        return hasCMAFFeatures || hasCMAFStreaming ? 'Enabled' : 'Disabled';
+        return hasCMAFFeatures ? 'Enabled' : 'Disabled';
     }
 
     // Initialize multi-select functionality
@@ -1212,7 +1464,6 @@
             button.addEventListener('click', (e) => {
                 e.stopPropagation();
 
-                // Close other dropdowns
                 buttons.forEach(otherButton => {
                     if (otherButton !== button) {
                         const otherContainer = otherButton.closest('.multi-select-container');
@@ -1222,7 +1473,6 @@
                     }
                 });
 
-                // Toggle current dropdown
                 const isOpen = dropdown.classList.contains('open');
                 dropdown.classList.toggle('open');
                 button.classList.toggle('active');
@@ -1237,7 +1487,6 @@
             });
         });
 
-        // Close dropdowns when clicking outside
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.multi-select-container')) {
                 buttons.forEach(button => {
@@ -1249,7 +1498,6 @@
             }
         });
 
-        // Clear all filters
         elements.clearAllFilters.addEventListener('click', clearAllFilters);
     }
 
@@ -1259,7 +1507,6 @@
 
         dropdown.innerHTML = '';
 
-        // Add search input
         const searchContainer = document.createElement('div');
         searchContainer.className = 'multi-select-search';
 
@@ -1274,12 +1521,10 @@
         searchContainer.appendChild(searchInput);
         dropdown.appendChild(searchContainer);
 
-        // Add options container
         const optionsContainer = document.createElement('div');
         optionsContainer.className = 'multi-select-options';
 
         const sortedValues = [...values].sort((a, b) => {
-            // Sort numbers numerically, strings alphabetically
             if (!isNaN(a) && !isNaN(b)) {
                 return parseInt(a) - parseInt(b);
             }
@@ -1304,7 +1549,7 @@
                 }
                 updateActiveFiltersDisplay();
                 updateButtonText(filterType);
-                loadData();
+                applyFiltersAndReload();
             });
 
             const label = document.createElement('span');
@@ -1317,7 +1562,6 @@
 
         dropdown.appendChild(optionsContainer);
 
-        // Add no results message
         const noResults = document.createElement('div');
         noResults.className = 'no-results';
         noResults.textContent = 'No options found';
@@ -1352,7 +1596,6 @@
 
         currentData.forEach(item => {
             if (config.isComputed && filterType === 'cmaf') {
-                // Special handling for CMAF
                 values.add(getCMAFStatus(item));
             } else {
                 let itemValue = item[config.field];
@@ -1394,11 +1637,8 @@
                 const chip = document.createElement('div');
                 chip.className = 'filter-chip';
 
-                // Add special styling for CMAF and streaming properties
                 if (filterType === 'cmaf') {
                     chip.classList.add('cmaf-chip');
-                } else if (filterType === 'streamingProperties') {
-                    chip.classList.add('streaming-chip');
                 }
 
                 const category = document.createElement('span');
@@ -1416,7 +1656,7 @@
                     updateActiveFiltersDisplay();
                     updateButtonText(filterType);
                     updateDropdownCheckboxes(filterType);
-                    loadData();
+                    applyFiltersAndReload();
                 };
 
                 chip.appendChild(category);
@@ -1451,6 +1691,12 @@
             updateButtonText(filterType);
         });
         updateActiveFiltersDisplay();
+        applyFiltersAndReload();
+    }
+
+    function applyFiltersAndReload() {
+        currentPage = 1;
+        selectedRows.clear(); // Clear selections when filters change
         loadData();
     }
 
@@ -1531,14 +1777,16 @@
             if (result.success) {
                 totalPages = result.pagination.totalPages;
                 currentPage = result.pagination.currentPage;
+                totalItems = result.pagination.totalItems;
                 currentData = result.data;
 
                 // Apply client-side filters
-                const filteredData = applyFilters(result.data);
+                filteredData = applyFilters(result.data);
 
                 renderMediaTable(filteredData);
                 updatePagination(result.pagination, filteredData.length);
                 updateStats(filteredData);
+                updateSelectionUI();
 
                 elements.loading.style.display = 'none';
                 elements.tableWrapper.style.display = 'block';
@@ -1562,9 +1810,18 @@
             const series = item.series_title || 'N/A';
             const guid = item.guid || 'N/A';
             const cmafStatus = getCMAFStatus(item);
+            const itemId = getRowId(item);
+
+            const featuresColumn = document.querySelector('.col-features');
+            const featuresWidth = featuresColumn ? parseInt(getComputedStyle(featuresColumn).width) : 180;
 
             return `
                 <tr>
+                    <td class="col-select">
+                        <input type="checkbox" class="row-checkbox row-select"
+                               data-id="${itemId}"
+                               onchange="toggleRowSelection('${itemId}')">
+                    </td>
                     <td class="col-title" title="${title}">${title.length > 35 ? title.substring(0, 32) + '...' : title}</td>
                     <td class="col-series" title="${series}">${series.length > 25 ? series.substring(0, 22) + '...' : series}</td>
                     <td class="col-season-episode">
@@ -1573,8 +1830,7 @@
                     </td>
                     <td class="col-type">${renderContentTypeBadge(item.content_type)}</td>
                     <td class="col-availability">${renderAvailabilityBadge(item.availability_state)}</td>
-                    <td class="col-features">${renderFeatureTags(item.premium_features)}</td>
-                    <td class="col-streaming-properties">${renderStreamingPropertyTags(item.streaming_properties)}</td>
+                    <td class="col-features">${renderFeatureTags(item.premium_features, featuresWidth)}</td>
                     <td class="col-cmaf">${renderCMAFIndicator(cmafStatus)}</td>
                     <td class="col-updated">${formatDate(item.updated_timestamp)}</td>
                     <td class="col-guid">${renderGUIDWithLink(guid)}</td>
@@ -1591,6 +1847,8 @@
                 </tr>
             `;
         }
+
+        updateSelectionUI();
     }
 
     // Helper functions
@@ -1598,20 +1856,6 @@
         if (!timestamp) return 'N/A';
         const date = new Date(parseInt(timestamp));
         return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-    }
-
-    function renderFeatureTags(features) {
-        if (!features || features.length === 0) return '<span style="color: var(--text-muted);">N/A</span>';
-        return `<div class="feature-tags">${features.slice(0, 2).map(feature =>
-            `<span class="feature-tag">${feature}</span>`
-        ).join('')}${features.length > 2 ? '<span style="color: var(--text-muted); font-size: 0.7rem;">+' + (features.length - 2) + '</span>' : ''}</div>`;
-    }
-
-    function renderStreamingPropertyTags(properties) {
-        if (!properties || properties.length === 0) return '<span style="color: var(--text-muted);">N/A</span>';
-        return `<div class="streaming-property-tags">${properties.slice(0, 2).map(property =>
-            `<span class="streaming-property-tag">${property}</span>`
-        ).join('')}${properties.length > 2 ? '<span style="color: var(--text-muted); font-size: 0.7rem;">+' + (properties.length - 2) + '</span>' : ''}</div>`;
     }
 
     function renderCMAFIndicator(status) {
@@ -1636,24 +1880,22 @@
     function updatePagination(pagination, filteredCount) {
         const itemsPerPage = 50;
         const startItem = (pagination.currentPage - 1) * itemsPerPage + 1;
-        const endItem = Math.min(pagination.currentPage * itemsPerPage, filteredCount || pagination.total);
+        const endItem = Math.min(pagination.currentPage * itemsPerPage, filteredCount || pagination.totalItems);
 
         elements.paginationMain.textContent = `Page ${pagination.currentPage} of ${pagination.totalPages}`;
-        elements.paginationDetails.textContent = `Showing ${startItem.toLocaleString()} to ${endItem.toLocaleString()} of ${(filteredCount || pagination.total).toLocaleString()} entries`;
+        elements.paginationDetails.textContent = `Showing ${startItem.toLocaleString()} to ${endItem.toLocaleString()} of ${(filteredCount || pagination.totalItems).toLocaleString()} entries`;
 
         elements.prevBtn.disabled = !pagination.hasPrev;
         elements.nextBtn.disabled = !pagination.hasNext;
 
-        // Update page jump input
         elements.pageJump.max = pagination.totalPages;
         elements.pageJump.placeholder = pagination.currentPage.toString();
     }
 
-    function updateStats(filteredData) {
-        elements.filteredItems.textContent = filteredData.length.toLocaleString();
+    function updateStats(filteredDataParam) {
+        elements.filteredItems.textContent = filteredDataParam.length.toLocaleString();
 
-        // Count CMAF enabled items
-        const cmafEnabled = filteredData.filter(item => getCMAFStatus(item) === 'Enabled').length;
+        const cmafEnabled = filteredDataParam.filter(item => getCMAFStatus(item) === 'Enabled').length;
         elements.cmafCount.textContent = cmafEnabled.toLocaleString();
 
         if (allStats.premiumFeatures) {
@@ -1664,7 +1906,6 @@
         }
     }
 
-    // Page jump functionality
     function jumpToPage(pageNum) {
         const page = parseInt(pageNum);
         if (page >= 1 && page <= totalPages && page !== currentPage) {
@@ -1680,6 +1921,7 @@
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
                 currentPage = 1;
+                selectedRows.clear(); // Clear selections when search changes
                 loadData();
             }, 500);
         });
@@ -1705,7 +1947,6 @@
             }
         });
 
-        // Page jump functionality
         elements.pageJump.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 jumpToPage(e.target.value);
@@ -1725,14 +1966,16 @@
     async function initialize() {
         initializeColumnResizing();
         initializeMultiSelect();
+        initializeSelection();
         setupEventListeners();
         updateActiveFiltersDisplay();
         await loadFilters();
         await loadData();
     }
 
-    // Make copyToClipboard globally available for onclick handlers
+    // Make functions globally available for onclick handlers
     window.copyToClipboard = copyToClipboard;
+    window.toggleRowSelection = toggleRowSelection;
 
     // Start the dashboard
     initialize();
