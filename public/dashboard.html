@@ -251,111 +251,6 @@
             font-size: 0.85rem;
         }
 
-        /* Column Width Controls */
-        .column-controls {
-            background: var(--surface-2);
-            border: 1px solid var(--border-light);
-            border-radius: 8px;
-            padding: 1.5rem;
-            margin-bottom: 1rem;
-        }
-
-        .column-controls h3 {
-            margin: 0 0 1.5rem 0;
-            font-size: 1.1rem;
-            color: var(--text);
-            font-weight: 600;
-            text-align: center;
-        }
-
-        .column-sliders {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1rem;
-        }
-
-        .column-slider-group {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        .column-slider-label {
-            font-size: 0.85rem;
-            color: var(--text);
-            font-weight: 500;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .column-width-value {
-            color: var(--primary);
-            font-weight: 600;
-            font-size: 0.8rem;
-        }
-
-        .column-slider {
-            width: 100%;
-            height: 6px;
-            background: var(--border);
-            border-radius: 3px;
-            outline: none;
-            -webkit-appearance: none;
-            cursor: pointer;
-            transition: background 0.2s ease;
-        }
-
-        .column-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 18px;
-            height: 18px;
-            background: var(--primary);
-            border-radius: 50%;
-            cursor: pointer;
-            box-shadow: 0 2px 6px rgba(96, 165, 250, 0.3);
-            transition: all 0.2s ease;
-        }
-
-        .column-slider::-webkit-slider-thumb:hover {
-            background: var(--primary-hover);
-            transform: scale(1.1);
-            box-shadow: 0 4px 12px rgba(96, 165, 250, 0.5);
-        }
-
-        .column-slider::-moz-range-thumb {
-            width: 18px;
-            height: 18px;
-            background: var(--primary);
-            border-radius: 50%;
-            cursor: pointer;
-            border: none;
-            box-shadow: 0 2px 6px rgba(96, 165, 250, 0.3);
-            transition: all 0.2s ease;
-        }
-
-        .column-slider::-moz-range-thumb:hover {
-            background: var(--primary-hover);
-            transform: scale(1.1);
-        }
-
-        .column-reset-btn {
-            background: var(--warning);
-            color: var(--text-dark);
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.2s ease;
-            margin-top: 1rem;
-        }
-
-        .column-reset-btn:hover {
-            background: color-mix(in oklab, var(--warning), #000 10%);
-        }
-
         /* Active Filters */
         .active-filters-section {
             margin-bottom: 1.5rem;
@@ -832,8 +727,7 @@
 
         @media (max-width: 768px) {
             .controls-grid,
-            .filters-grid,
-            .column-sliders {
+            .filters-grid {
                 grid-template-columns: 1fr;
             }
 
@@ -886,106 +780,6 @@
                     <option value="ASC">Ascending</option>
                     <option value="DESC">Descending</option>
                 </select>
-            </div>
-        </div>
-
-        <!-- Column Width Controls -->
-        <div class="column-controls">
-            <h3>📏 Column Width Controls</h3>
-            <div class="column-sliders">
-                <div class="column-slider-group">
-                    <div class="column-slider-label">
-                        <span>📝 Title</span>
-                        <span class="column-width-value" id="title-width-value">280px</span>
-                    </div>
-                    <input type="range" class="column-slider" id="title-slider"
-                           min="120" max="400" value="280" data-column="title">
-                </div>
-
-                <div class="column-slider-group">
-                    <div class="column-slider-label">
-                        <span>📺 Series</span>
-                        <span class="column-width-value" id="series-width-value">220px</span>
-                    </div>
-                    <input type="range" class="column-slider" id="series-slider"
-                           min="100" max="350" value="220" data-column="series">
-                </div>
-
-                <div class="column-slider-group">
-                    <div class="column-slider-label">
-                        <span>🔢 S/E</span>
-                        <span class="column-width-value" id="season-episode-width-value">80px</span>
-                    </div>
-                    <input type="range" class="column-slider" id="season-episode-slider"
-                           min="60" max="120" value="80" data-column="season-episode">
-                </div>
-
-                <div class="column-slider-group">
-                    <div class="column-slider-label">
-                        <span>🎭 Type</span>
-                        <span class="column-width-value" id="type-width-value">120px</span>
-                    </div>
-                    <input type="range" class="column-slider" id="type-slider"
-                           min="80" max="180" value="120" data-column="type">
-                </div>
-
-                <div class="column-slider-group">
-                    <div class="column-slider-label">
-                        <span>📡 Availability</span>
-                        <span class="column-width-value" id="availability-width-value">140px</span>
-                    </div>
-                    <input type="range" class="column-slider" id="availability-slider"
-                           min="100" max="200" value="140" data-column="availability">
-                </div>
-
-                <div class="column-slider-group">
-                    <div class="column-slider-label">
-                        <span>⭐ Features</span>
-                        <span class="column-width-value" id="features-width-value">180px</span>
-                    </div>
-                    <input type="range" class="column-slider" id="features-slider"
-                           min="120" max="300" value="180" data-column="features">
-                </div>
-
-                <div class="column-slider-group">
-                    <div class="column-slider-label">
-                        <span>🎥 Streaming</span>
-                        <span class="column-width-value" id="streaming-properties-width-value">180px</span>
-                    </div>
-                    <input type="range" class="column-slider" id="streaming-properties-slider"
-                           min="120" max="300" value="180" data-column="streaming-properties">
-                </div>
-
-                <div class="column-slider-group">
-                    <div class="column-slider-label">
-                        <span>📦 CMAF</span>
-                        <span class="column-width-value" id="cmaf-width-value">100px</span>
-                    </div>
-                    <input type="range" class="column-slider" id="cmaf-slider"
-                           min="80" max="150" value="100" data-column="cmaf">
-                </div>
-
-                <div class="column-slider-group">
-                    <div class="column-slider-label">
-                        <span>📅 Updated</span>
-                        <span class="column-width-value" id="updated-width-value">160px</span>
-                    </div>
-                    <input type="range" class="column-slider" id="updated-slider"
-                           min="120" max="220" value="160" data-column="updated">
-                </div>
-
-                <div class="column-slider-group">
-                    <div class="column-slider-label">
-                        <span>🔗 GUID</span>
-                        <span class="column-width-value" id="guid-width-value">200px</span>
-                    </div>
-                    <input type="range" class="column-slider" id="guid-slider"
-                           min="150" max="300" value="200" data-column="guid">
-                </div>
-            </div>
-
-            <div style="text-align: center;">
-                <button class="column-reset-btn" id="reset-columns">🔄 Reset to Default</button>
             </div>
         </div>
 
@@ -1195,20 +989,6 @@
         episode: new Set()
     };
 
-    // Column width defaults
-    const defaultColumnWidths = {
-        'title': 280,
-        'series': 220,
-        'season-episode': 80,
-        'type': 120,
-        'availability': 140,
-        'features': 180,
-        'streaming-properties': 180,
-        'cmaf': 100,
-        'updated': 160,
-        'guid': 200
-    };
-
     // Filter configurations
     const filterConfigs = {
         series: {
@@ -1278,7 +1058,6 @@
         encodedCount: document.getElementById('encoded-count'),
         activeFilters: document.getElementById('active-filters'),
         clearAllFilters: document.getElementById('clear-all-filters'),
-        resetColumns: document.getElementById('reset-columns'),
         resizeLine: document.getElementById('resize-line')
     };
 
@@ -1332,19 +1111,8 @@
             currentColumn.style.width = clampedWidth + 'px';
             elements.resizeLine.style.left = e.clientX + 'px';
 
-            // Update corresponding slider and value display
-            const columnName = currentColumn.getAttribute('data-column');
-            const slider = document.getElementById(`${columnName}-slider`);
-            const valueElement = document.getElementById(`${columnName}-width-value`);
-
-            if (slider) {
-                slider.value = clampedWidth;
-            }
-            if (valueElement) {
-                valueElement.textContent = `${clampedWidth}px`;
-            }
-
             // Update all elements with the same column class
+            const columnName = currentColumn.getAttribute('data-column');
             updateColumnWidth(columnName, clampedWidth);
         }
     }
@@ -1360,50 +1128,12 @@
         }
     }
 
-    // Initialize column width controls
-    function initializeColumnControls() {
-        const sliders = document.querySelectorAll('.column-slider');
-
-        sliders.forEach(slider => {
-            const columnName = slider.getAttribute('data-column');
-            const valueElement = document.getElementById(`${columnName}-width-value`);
-
-            slider.addEventListener('input', (e) => {
-                const width = parseInt(e.target.value);
-                updateColumnWidth(columnName, width);
-                if (valueElement) {
-                    valueElement.textContent = `${width}px`;
-                }
-            });
-        });
-
-        // Reset button
-        elements.resetColumns.addEventListener('click', resetColumnWidths);
-    }
-
     function updateColumnWidth(columnName, width) {
         const className = `.col-${columnName}`;
         const elements = document.querySelectorAll(className);
 
         elements.forEach(element => {
             element.style.width = `${width}px`;
-        });
-    }
-
-    function resetColumnWidths() {
-        Object.keys(defaultColumnWidths).forEach(columnName => {
-            const width = defaultColumnWidths[columnName];
-            const slider = document.getElementById(`${columnName}-slider`);
-            const valueElement = document.getElementById(`${columnName}-width-value`);
-
-            if (slider) {
-                slider.value = width;
-            }
-            if (valueElement) {
-                valueElement.textContent = `${width}px`;
-            }
-
-            updateColumnWidth(columnName, width);
         });
     }
 
@@ -1993,7 +1723,6 @@
 
     // Initialize dashboard
     async function initialize() {
-        initializeColumnControls();
         initializeColumnResizing();
         initializeMultiSelect();
         setupEventListeners();
