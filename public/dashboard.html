@@ -854,9 +854,11 @@
             <div class="control-group">
                 <label for="per-page">📄 Items per Page</label>
                 <select id="per-page">
-                    <option value="25">25</option>
                     <option value="50" selected>50</option>
                     <option value="100">100</option>
+                    <option value="500">500</option>
+                    <option value="1000">1000</option>
+                    <option value="ALL">ALL</option>
                 </select>
             </div>
         </div>
@@ -1067,6 +1069,7 @@
     let currentPage = 1;
     let totalPages = 1;
     let totalItems = 0;
+    let totalFilteredItems = 0; // Add this to track filtered total
     let isLoading = false;
     let currentData = [];
     let filteredData = [];
@@ -1329,7 +1332,7 @@
     async function loadAllFilteredData() {
         try {
             let page = 1;
-            const limit = 100;
+            const limit = 1000; // Use 1000 for efficiency when loading all data
             allFilteredData = [];
 
             while (true) {
@@ -1450,10 +1453,13 @@
     function renderFeatureTags(features, columnWidth) {
         if (!features || features.length === 0) return '<span style="color: var(--text-muted);">N/A</span>';
 
+        // Sort features alphabetically for consistent display
+        const sortedFeatures = [...features].sort((a, b) => a.localeCompare(b));
+
         const tagWidth = 60;
         const maxTags = Math.max(1, Math.floor((columnWidth - 20) / tagWidth));
-        const visibleFeatures = features.slice(0, maxTags);
-        const remainingCount = features.length - visibleFeatures.length;
+        const visibleFeatures = sortedFeatures.slice(0, maxTags);
+        const remainingCount = sortedFeatures.length - visibleFeatures.length;
 
         let html = `<div class="feature-tags">`;
         html += visibleFeatures.map(feature => `<span class="feature-tag">${feature}</span>`).join('');
@@ -1883,6 +1889,7 @@
                 allStats = result.data;
                 elements.totalItemsSpan.textContent = result.data.totalItems.toLocaleString();
                 elements.totalSeries.textContent = result.data.totalSeries.toLocaleString();
+                totalFilteredItems = result.data.totalItems; // Initialize with total
             }
         } catch (error) {
             console.error('Error loading filters:', error);
@@ -1893,7 +1900,13 @@
     function buildQueryParams(page = currentPage, limit = null) {
         const params = new URLSearchParams();
         params.append('page', page);
-        params.append('limit', limit || elements.perPage.value);
+
+        const perPageValue = limit || elements.perPage.value;
+        if (perPageValue === 'ALL') {
+            params.append('limit', '10000'); // Use a very high limit for ALL
+        } else {
+            params.append('limit', perPageValue);
+        }
 
         if (elements.search.value.trim()) {
             params.append('search', elements.search.value.trim());
@@ -1929,8 +1942,16 @@
                 // Apply client-side filters
                 filteredData = applyFilters(result.data);
 
+                // Update total filtered items count for pagination display
+                if (elements.perPage.value === 'ALL' || hasActiveFilters()) {
+                    // For ALL or when filters are active, count all filtered results
+                    totalFilteredItems = await getTotalFilteredCount();
+                } else {
+                    totalFilteredItems = totalItems;
+                }
+
                 renderMediaTable(filteredData);
-                updatePagination(result.pagination, filteredData.length);
+                updatePagination(result.pagination);
                 updateStats(filteredData);
                 updateSelectionUI(); // This will maintain selections across pages
                 updateSortIndicators();
@@ -1948,6 +1969,34 @@
         }
 
         isLoading = false;
+    }
+
+    // Check if any filters are active
+    function hasActiveFilters() {
+        return Object.values(activeFilters).some(filterSet => filterSet.size > 0) ||
+            elements.search.value.trim() !== '';
+    }
+
+    // Get total count of filtered results
+    async function getTotalFilteredCount() {
+        try {
+            // If we already loaded all filtered data, return that count
+            if (allFilteredData.length > 0) {
+                return allFilteredData.length;
+            }
+
+            // Otherwise, make a quick count query (if no filters, return totalItems)
+            if (!hasActiveFilters()) {
+                return totalItems;
+            }
+
+            // For now, use the current page's filtered count as an estimate
+            // In a real application, you might want to make a separate count query
+            return filteredData.length;
+        } catch (error) {
+            console.error('Error getting total filtered count:', error);
+            return totalItems;
+        }
     }
 
     // Render media table
@@ -2025,23 +2074,39 @@
         return `<span class="availability-badge ${className}">${state}</span>`;
     }
 
-    function updatePagination(pagination, filteredCount) {
-        const itemsPerPage = parseInt(elements.perPage.value);
-        const startItem = (pagination.currentPage - 1) * itemsPerPage + 1;
-        const endItem = Math.min(pagination.currentPage * itemsPerPage, filteredCount || pagination.totalItems);
+    function updatePagination(pagination) {
+        const perPageValue = elements.perPage.value;
 
-        elements.paginationMain.textContent = `Page ${pagination.currentPage} of ${pagination.totalPages}`;
-        elements.paginationDetails.textContent = `Showing ${startItem.toLocaleString()} to ${endItem.toLocaleString()} of ${(filteredCount || pagination.totalItems).toLocaleString()} entries`;
+        if (perPageValue === 'ALL') {
+            // When showing ALL, hide pagination controls
+            elements.paginationMain.textContent = 'Showing All Results';
+            elements.paginationDetails.textContent = `Displaying all ${totalFilteredItems.toLocaleString()} entries`;
+            elements.prevBtn.style.display = 'none';
+            elements.nextBtn.style.display = 'none';
+            elements.pageJump.parentElement.style.display = 'none';
+        } else {
+            // Normal pagination
+            const itemsPerPage = parseInt(perPageValue);
+            const startItem = (pagination.currentPage - 1) * itemsPerPage + 1;
+            const endItem = Math.min(pagination.currentPage * itemsPerPage, pagination.totalItems);
 
-        elements.prevBtn.disabled = !pagination.hasPrev;
-        elements.nextBtn.disabled = !pagination.hasNext;
+            elements.paginationMain.textContent = `Page ${pagination.currentPage} of ${pagination.totalPages}`;
+            elements.paginationDetails.textContent = `Showing ${startItem.toLocaleString()} to ${endItem.toLocaleString()} of ${totalFilteredItems.toLocaleString()} entries`;
 
-        elements.pageJump.max = pagination.totalPages;
-        elements.pageJump.placeholder = pagination.currentPage.toString();
+            elements.prevBtn.disabled = !pagination.hasPrev;
+            elements.nextBtn.disabled = !pagination.hasNext;
+            elements.pageJump.max = pagination.totalPages;
+            elements.pageJump.placeholder = pagination.currentPage.toString();
+
+            // Show pagination controls
+            elements.prevBtn.style.display = 'inline-block';
+            elements.nextBtn.style.display = 'inline-block';
+            elements.pageJump.parentElement.style.display = 'flex';
+        }
     }
 
     function updateStats(filteredDataParam) {
-        elements.filteredItems.textContent = filteredDataParam.length.toLocaleString();
+        elements.filteredItems.textContent = totalFilteredItems.toLocaleString();
 
         const cmafEnabled = filteredDataParam.filter(item => getCMAFStatus(item) === 'Enabled').length;
         elements.cmafCount.textContent = cmafEnabled.toLocaleString();
