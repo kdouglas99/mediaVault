@@ -68,11 +68,9 @@ const RATE_LIMIT_DEFAULT_MAX = 100;
 const RATE_LIMIT_UPLOAD_MAX = Number(process.env.UPLOAD_RATE_LIMIT_MAX || 3);
 const UPLOAD_RATE_LIMIT_WINDOW_MS = Number(process.env.UPLOAD_RATE_LIMIT_WINDOW_MS || (2 * 60 * 1000));
 const rateBuckets = new Map();
-/**
- * Sliding window counter per IP
- */
+
 const rateLimit = (maxRequests = RATE_LIMIT_DEFAULT_MAX, windowMs = RATE_LIMIT_WINDOW_MS) => (req, res, next) => {
-    if (req.method === 'OPTIONS') return next(); // don't rate-limit preflight
+    if (req.method === 'OPTIONS') return next();
     const now = Date.now();
     const ip = req.ip || req.socket?.remoteAddress || 'unknown';
     const bucket = rateBuckets.get(ip) || [];
@@ -106,21 +104,9 @@ app.get('/api/test', rateLimit(), async (req, res) => {
     }
 });
 
-// Validate and normalize pagination/sorting/filter params
+// Simplified parseListParams - only handle basic search and sorting, no pagination on server
 const parseListParams = (query) => {
-    const toPosIntOr = (v, def, { min = 1, max = Number.MAX_SAFE_INTEGER } = {}) => {
-        const n = Number.parseInt(String(v ?? def), 10);
-        if (Number.isNaN(n)) return def;
-        return Math.min(Math.max(n, min), max);
-    };
-    const page = toPosIntOr(query.page, 1);
-    const limit = toPosIntOr(query.limit, 50, { min: 1, max: 100 });
-    const offset = (page - 1) * limit;
-
     const search = (query.search ?? '').toString().trim();
-    const series = (query.series ?? '').toString().trim();
-    const contentType = (query.contentType ?? '').toString().trim();
-    const availability = (query.availability ?? '').toString().trim();
 
     const validSortColumns = ['title', 'series_title', 'season_number', 'episode_number', 'created_at', 'updated_timestamp'];
     const validSortOrders = ['ASC', 'DESC'];
@@ -129,69 +115,48 @@ const parseListParams = (query) => {
     const sortBy = validSortColumns.includes(sortByRaw) ? sortByRaw : 'title';
     const sortOrder = validSortOrders.includes(sortOrderRaw) ? sortOrderRaw : 'ASC';
 
-    return { page, limit, offset, search, series, contentType, availability, sortBy, sortOrder };
+    return { search, sortBy, sortOrder };
 };
 
-// Get all media items with pagination and filtering
+// Get all media items - server returns ALL data, frontend handles pagination and filtering
 app.get('/api/items', rateLimit(), async (req, res) => {
     let client;
     try {
-        const { page, limit, offset, search, series, contentType, availability, sortBy, sortOrder } = parseListParams(req.query);
+        const { search, sortBy, sortOrder } = parseListParams(req.query);
 
         client = await pool.connect();
 
-        // Build WHERE with parameters
+        // Build WHERE clause only for basic search
         const conditions = [];
         const params = [];
         let idx = 1;
 
         if (search) {
-            conditions.push(`title ILIKE $${idx++}`);
+            conditions.push(`(title ILIKE $${idx} OR series_title ILIKE $${idx})`);
             params.push(`%${search}%`);
-        }
-        if (series) {
-            conditions.push(`series_title ILIKE $${idx++}`);
-            params.push(`%${series}%`);
-        }
-        if (contentType) {
-            conditions.push(`content_type = $${idx++}`);
-            params.push(contentType);
-        }
-        if (availability) {
-            conditions.push(`availability_state = $${idx++}`);
-            params.push(availability);
+            idx++;
         }
 
         const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
-        const countSql = `SELECT COUNT(*)::int AS total FROM media_items ${whereClause}`;
-        const { rows: countRows } = await client.query(countSql, params);
-        const totalItems = countRows[0]?.total ?? 0;
-
+        // Always return ALL data - let frontend handle pagination and filtering
         const dataSql = `
-      SELECT
-        id, external_id, guid, title, series_title, season_number, episode_number,
-        content_type, availability_state, countries, premium_features,
-        updated_timestamp, added_timestamp, created_at, updated_at
-      FROM media_items
-      ${whereClause}
-      ORDER BY ${sortBy} ${sortOrder}
-      LIMIT $${idx++} OFFSET $${idx++}
-    `;
-        const dataParams = [...params, limit, offset];
-        const { rows } = await client.query(dataSql, dataParams);
+            SELECT
+                id, external_id, guid, title, series_title, season_number, episode_number,
+                content_type, availability_state, countries, premium_features,
+                updated_timestamp, added_timestamp, created_at, updated_at
+            FROM media_items
+                     ${whereClause}
+            ORDER BY ${sortBy} ${sortOrder}
+        `;
 
+        const { rows } = await client.query(dataSql, params);
+
+        // Return all data with simple metadata
         res.json({
             success: true,
             data: rows,
-            pagination: {
-                currentPage: page,
-                totalPages: Math.ceil(totalItems / limit),
-                totalItems,
-                itemsPerPage: limit,
-                hasNext: offset + limit < totalItems,
-                hasPrev: page > 1
-            }
+            totalItems: rows.length
         });
     } catch (error) {
         logger.error('Error fetching items', { error: error.message, stack: error.stack, query: req.query });
@@ -211,11 +176,11 @@ app.get('/api/stats', rateLimit(), async (req, res) => {
             `SELECT content_type, COUNT(*)::int as count FROM media_items WHERE content_type IS NOT NULL GROUP BY content_type ORDER BY count DESC`,
             `SELECT availability_state, COUNT(*)::int as count FROM media_items WHERE availability_state IS NOT NULL GROUP BY availability_state ORDER BY count DESC`,
             `SELECT feature, COUNT(*)::int as count
-         FROM (
-           SELECT unnest(premium_features) as feature FROM media_items WHERE premium_features IS NOT NULL
-         ) t
-         GROUP BY feature
-         ORDER BY count DESC`,
+             FROM (
+                 SELECT unnest(premium_features) as feature FROM media_items WHERE premium_features IS NOT NULL
+                 ) t
+             GROUP BY feature
+             ORDER BY count DESC`,
             `SELECT COUNT(DISTINCT series_title)::int as series_count FROM media_items WHERE series_title IS NOT NULL`
         ];
         const [totalResult, contentTypeResult, availabilityResult, featuresResult, seriesResult] = await Promise.all(
@@ -239,57 +204,57 @@ app.get('/api/stats', rateLimit(), async (req, res) => {
     }
 });
 
-// Add this shared handler + both routes
+// Database initialization handler
 const initDbHandler = async (req, res) => {
-  let client;
-  try {
-    client = await pool.connect();
+    let client;
+    try {
+        client = await pool.connect();
 
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS media_items (
-        id SERIAL PRIMARY KEY,
-        external_id TEXT UNIQUE,
-        guid TEXT,
-        title TEXT,
-        series_title TEXT,
-        season_number INTEGER,
-        episode_number INTEGER,
-        content_type TEXT,
-        availability_state TEXT,
-        countries TEXT[],
-        premium_features TEXT[],
-        updated_timestamp BIGINT,
-        added_timestamp BIGINT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS media_items (
+                                                       id SERIAL PRIMARY KEY,
+                                                       external_id TEXT UNIQUE,
+                                                       guid TEXT,
+                                                       title TEXT,
+                                                       series_title TEXT,
+                                                       season_number INTEGER,
+                                                       episode_number INTEGER,
+                                                       content_type TEXT,
+                                                       availability_state TEXT,
+                                                       countries TEXT[],
+                                                       premium_features TEXT[],
+                                                       updated_timestamp BIGINT,
+                                                       added_timestamp BIGINT,
+                                                       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                                       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
 
-      CREATE TABLE IF NOT EXISTS media_items_staging (
-        id TEXT,
-        guid TEXT,
-        updated TEXT,
-        title TEXT,
-        added TEXT,
-        countries TEXT,
-        availabilityState TEXT,
-        episode_number TEXT,
-        omit TEXT,
-        primary_category_id TEXT,
-        primary_category_name TEXT,
-        season_number TEXT,
-        series_title TEXT,
-        content_type TEXT,
-        premium_features TEXT
-      );
+            CREATE TABLE IF NOT EXISTS media_items_staging (
+                                                               id TEXT,
+                                                               guid TEXT,
+                                                               updated TEXT,
+                                                               title TEXT,
+                                                               added TEXT,
+                                                               countries TEXT,
+                                                               availabilityState TEXT,
+                                                               episode_number TEXT,
+                                                               omit TEXT,
+                                                               primary_category_id TEXT,
+                                                               primary_category_name TEXT,
+                                                               season_number TEXT,
+                                                               series_title TEXT,
+                                                               content_type TEXT,
+                                                               premium_features TEXT
+            );
 
-      CREATE INDEX IF NOT EXISTS idx_media_items_title ON media_items(title);
-      CREATE INDEX IF NOT EXISTS idx_media_items_series_title ON media_items(series_title);
-      CREATE INDEX IF NOT EXISTS idx_media_items_content_type ON media_items(content_type);
-      CREATE INDEX IF NOT EXISTS idx_media_items_availability_state ON media_items(availability_state);
-      CREATE INDEX IF NOT EXISTS idx_media_items_external_id ON media_items(external_id);
-    `);
+            CREATE INDEX IF NOT EXISTS idx_media_items_title ON media_items(title);
+            CREATE INDEX IF NOT EXISTS idx_media_items_series_title ON media_items(series_title);
+            CREATE INDEX IF NOT EXISTS idx_media_items_content_type ON media_items(content_type);
+            CREATE INDEX IF NOT EXISTS idx_media_items_availability_state ON media_items(availability_state);
+            CREATE INDEX IF NOT EXISTS idx_media_items_external_id ON media_items(external_id);
+        `);
 
-    await client.query(`
+        await client.query(`
       CREATE OR REPLACE FUNCTION import_media_csv()
       RETURNS INTEGER AS $$
       DECLARE
@@ -346,27 +311,25 @@ const initDbHandler = async (req, res) => {
       $$ LANGUAGE plpgsql;
     `);
 
-    res.json({ success: true, message: 'Database initialized' });
-  } catch (error) {
-    logger.error('DB init error', { error: error.message, stack: error.stack });
-    res.status(500).json({ success: false, error: 'Database initialization failed' });
-  } finally {
-    client?.release();
-  }
+        res.json({ success: true, message: 'Database initialized' });
+    } catch (error) {
+        logger.error('DB init error', { error: error.message, stack: error.stack });
+        res.status(500).json({ success: false, error: 'Database initialization failed' });
+    } finally {
+        client?.release();
+    }
 };
+
 app.post('/api/init-db', rateLimit(), initDbHandler);
 app.get('/api/init-db', rateLimit(), initDbHandler);
 
-// ---- CSV Import ----
-
-// Ensure uploads directory exists
+// CSV Import functionality
 const uploadsDir = path.join(__dirname, 'uploads');
 await fs.promises.mkdir(uploadsDir, { recursive: true }).catch(() => {});
 
-// Multer config
 const upload = multer({
     dest: uploadsDir,
-    limits: { fileSize: 50 * 1024 * 1024, files: 1 }, // 50MB, 1 file
+    limits: { fileSize: 50 * 1024 * 1024, files: 1 },
     fileFilter: (req, file, cb) => {
         const ok =
             file.mimetype === 'text/csv' ||
@@ -377,33 +340,18 @@ const upload = multer({
     }
 });
 
-// Helper to batch-insert into staging
 const insertBatchIntoStaging = async (client, rows) => {
     if (!rows.length) return;
-    // staging fields
     const cols = [
-        'id',
-        'guid',
-        'updated',
-        'title',
-        'added',
-        'countries',
-        'availabilityState',
-        'episode_number',
-        'omit',
-        'primary_category_id',
-        'primary_category_name',
-        'season_number',
-        'series_title',
-        'content_type',
-        'premium_features'
+        'id', 'guid', 'updated', 'title', 'added', 'countries', 'availabilityState',
+        'episode_number', 'omit', 'primary_category_id', 'primary_category_name',
+        'season_number', 'series_title', 'content_type', 'premium_features'
     ];
 
     const values = [];
     const params = [];
     let p = 1;
     for (const r of rows) {
-        // Map incoming headers to staging fields
         const rec = {
             id: r.id ?? null,
             guid: r.guid ?? null,
@@ -424,32 +372,17 @@ const insertBatchIntoStaging = async (client, rows) => {
 
         values.push(`(${cols.map(() => `$${p++}`).join(',')})`);
         params.push(
-            rec.id,
-            rec.guid,
-            rec.updated,
-            rec.title,
-            rec.added,
-            rec.countries,
-            rec.availabilityState,
-            rec.episode_number,
-            rec.omit,
-            rec.primary_category_id,
-            rec.primary_category_name,
-            rec.season_number,
-            rec.series_title,
-            rec.content_type,
-            rec.premium_features
+            rec.id, rec.guid, rec.updated, rec.title, rec.added, rec.countries,
+            rec.availabilityState, rec.episode_number, rec.omit, rec.primary_category_id,
+            rec.primary_category_name, rec.season_number, rec.series_title,
+            rec.content_type, rec.premium_features
         );
     }
 
-    const sql = `
-    INSERT INTO media_items_staging (${cols.join(',')})
-    VALUES ${values.join(',')}
-  `;
+    const sql = `INSERT INTO media_items_staging (${cols.join(',')}) VALUES ${values.join(',')}`;
     await client.query(sql, params);
 };
 
-// CSV import route
 app.post('/api/import/csv', rateLimit(RATE_LIMIT_UPLOAD_MAX, UPLOAD_RATE_LIMIT_WINDOW_MS), upload.single('csvFile'), async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ success: false, error: 'CSV file is required' });
@@ -464,7 +397,6 @@ app.post('/api/import/csv', rateLimit(RATE_LIMIT_UPLOAD_MAX, UPLOAD_RATE_LIMIT_W
         await client.query('BEGIN');
         await client.query('TRUNCATE TABLE media_items_staging');
 
-        // Stream CSV and batch insert
         const BATCH_SIZE = 500;
         let batch = [];
         const stream = fs.createReadStream(filePath).pipe(csvParser());
@@ -498,9 +430,7 @@ app.post('/api/import/csv', rateLimit(RATE_LIMIT_UPLOAD_MAX, UPLOAD_RATE_LIMIT_W
             stream.on('error', reject);
         });
 
-        // Clean up uploaded file
         fs.unlink(filePath, () => {});
-        // Reset the rate bucket for this IP after a successful import so user can run again without waiting
         rateBuckets.delete(ip);
 
         res.json({ success: true, message: 'CSV imported successfully' });
@@ -516,7 +446,7 @@ app.post('/api/import/csv', rateLimit(RATE_LIMIT_UPLOAD_MAX, UPLOAD_RATE_LIMIT_W
     }
 });
 
-// Multer/Upload error handler
+// Error handling
 app.use((err, req, res, next) => {
     if (err instanceof Error && (err.message.includes('CSV') || err.message.includes('File too large'))) {
         return res.status(400).json({ success: false, error: err.message });
@@ -524,7 +454,7 @@ app.use((err, req, res, next) => {
     next(err);
 });
 
-// Development-only debug endpoint
+// Debug endpoint for development
 if (process.env.NODE_ENV === 'development') {
     app.get('/api/debug/tables', rateLimit(), async (req, res) => {
         let client;
@@ -546,7 +476,7 @@ if (process.env.NODE_ENV === 'development') {
     });
 }
 
-// Catch-all 404 to help debug missing routes
+// 404 handler
 app.use((req, res) => {
     logger.warn('Route not found', { method: req.method, url: req.originalUrl });
     res.status(404).json({ success: false, error: 'Not found' });

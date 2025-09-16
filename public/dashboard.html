@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -449,6 +450,7 @@
             max-height: 70vh;
             position: relative;
             scroll-behavior: smooth;
+            border-radius: var(--radius);
         }
 
         .media-table {
@@ -456,9 +458,9 @@
             border-collapse: collapse;
             table-layout: fixed;
             min-width: 1500px;
+            position: relative;
         }
 
-        /* Sortable column headers */
         .media-table th {
             background: var(--surface-2);
             padding: 1rem 0.75rem;
@@ -471,9 +473,10 @@
             letter-spacing: 0.3px;
             position: sticky;
             top: 0;
-            z-index: 10;
+            z-index: 100;
             user-select: none;
-            position: relative;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
         }
 
         .media-table th:last-child {
@@ -533,24 +536,31 @@
             vertical-align: top;
             font-size: 0.85rem;
             overflow: hidden;
+            position: relative;
         }
 
         .media-table td:last-child {
             border-right: none;
         }
 
-        .media-table tr:hover {
+        .media-table tbody tr:hover {
             background: color-mix(in oklab, var(--surface), var(--primary) 4%);
         }
 
-        .media-table tr.selected {
+        .media-table tbody tr.selected {
             background: color-mix(in oklab, var(--surface), var(--primary) 12%);
         }
 
-        /* Selection checkbox column */
-        .col-select { width: 50px; }
+        .media-table tbody {
+            position: relative;
+        }
 
-        /* Column widths - dynamic */
+        .media-table tbody tr:first-child td {
+            border-top: 1px solid transparent;
+        }
+
+        /* Column widths */
+        .col-select { width: 50px; }
         .col-title { width: 280px; }
         .col-series { width: 220px; }
         .col-season-episode { width: 80px; }
@@ -1066,16 +1076,16 @@
 <script>
     const API_BASE = 'http://localhost:3001/api';
 
+    // Updated global variables for client-side approach
     let currentPage = 1;
     let totalPages = 1;
     let totalItems = 0;
-    let totalFilteredItems = 0; // Add this to track filtered total
     let isLoading = false;
-    let currentData = [];
-    let filteredData = [];
-    let allFilteredData = []; // Store all filtered results for export
+    let allData = []; // Store ALL data from server
+    let filteredData = []; // Data after applying filters
+    let displayedData = []; // Data currently displayed (paginated)
     let allStats = {};
-    let selectedRows = new Set(); // This persists across page changes
+    let selectedRows = new Set();
 
     // Sorting state
     let currentSort = {
@@ -1175,130 +1185,182 @@
         return item.external_id || item.id || item.guid || `row_${Math.random().toString(36).substr(2, 9)}`;
     }
 
-    // Initialize column sorting
-    function initializeColumnSorting() {
-        const sortableHeaders = document.querySelectorAll('.sortable');
+    // Simplified buildQueryParams - only need search and sorting
+    function buildQueryParams() {
+        const params = new URLSearchParams();
 
-        sortableHeaders.forEach(header => {
-            header.addEventListener('click', (e) => {
-                // Don't sort when resizing
-                if (isResizing) return;
+        if (elements.search.value.trim()) {
+            params.append('search', elements.search.value.trim());
+        }
 
-                const rect = header.getBoundingClientRect();
-                const isRightEdge = e.clientX >= rect.right - 8;
-                if (isRightEdge) return; // Don't sort when clicking resize area
+        params.append('sortBy', currentSort.column);
+        params.append('sortOrder', currentSort.direction);
 
-                const sortColumn = header.getAttribute('data-sort');
-
-                // Toggle direction if same column, otherwise default to ASC
-                if (currentSort.column === sortColumn) {
-                    currentSort.direction = currentSort.direction === 'ASC' ? 'DESC' : 'ASC';
-                } else {
-                    currentSort.column = sortColumn;
-                    currentSort.direction = 'ASC';
-                }
-
-                updateSortIndicators();
-                currentPage = 1;
-                // Don't clear selections when sorting - keep them across pages
-                loadData();
-            });
-        });
+        return params;
     }
 
-    function updateSortIndicators() {
-        document.querySelectorAll('.sortable').forEach(header => {
-            const sortColumn = header.getAttribute('data-sort');
-            const indicator = header.querySelector('.sort-indicator');
+    // Updated loadData function - much simpler now
+    async function loadData() {
+        if (isLoading) return;
 
-            header.classList.remove('sort-active');
+        isLoading = true;
+        elements.loading.style.display = 'block';
+        elements.error.style.display = 'none';
+        elements.tableWrapper.style.display = 'none';
+        elements.pagination.style.display = 'none';
 
-            if (sortColumn === currentSort.column) {
-                header.classList.add('sort-active');
-                indicator.textContent = currentSort.direction === 'ASC' ? '↑' : '↓';
+        try {
+            const params = buildQueryParams();
+            const response = await fetch(`${API_BASE}/items?${params}`);
+            const result = await response.json();
+
+            if (result.success) {
+                // Store all data from server
+                allData = result.data;
+                totalItems = result.totalItems;
+
+                // Apply client-side filters and pagination
+                applyFiltersAndPagination();
+
+                elements.loading.style.display = 'none';
+                elements.tableWrapper.style.display = 'block';
+                elements.pagination.style.display = 'flex';
             } else {
-                indicator.textContent = '⇅';
+                throw new Error(result.error || 'Failed to load data');
             }
-        });
+        } catch (error) {
+            elements.loading.style.display = 'none';
+            elements.error.style.display = 'block';
+            elements.error.textContent = 'Error loading data: ' + error.message;
+        }
+
+        isLoading = false;
     }
 
-    // Selection functionality
-    function initializeSelection() {
-        elements.selectAllCheckbox.addEventListener('change', handleSelectAll);
-        elements.selectAllBtn.addEventListener('click', selectAllFiltered);
-        elements.clearSelectionBtn.addEventListener('click', clearSelection);
-        elements.exportCsvBtn.addEventListener('click', exportToCsv);
-    }
+    // New function to handle all client-side filtering and pagination
+    function applyFiltersAndPagination() {
+        // Apply filters to get filtered dataset
+        filteredData = applyFilters(allData);
 
-    function handleSelectAll(e) {
-        const isChecked = e.target.checked;
-        if (isChecked) {
-            selectAllVisibleOnCurrentPage();
+        // Handle pagination based on dropdown selection
+        const perPageValue = elements.perPage.value;
+
+        if (perPageValue === 'ALL') {
+            // Show all filtered results
+            displayedData = [...filteredData];
+            totalPages = 1;
+            currentPage = 1;
         } else {
-            deselectAllVisibleOnCurrentPage();
+            // Paginate the filtered results
+            const itemsPerPage = parseInt(perPageValue);
+            totalPages = Math.ceil(filteredData.length / itemsPerPage);
+
+            // Ensure currentPage is valid
+            if (currentPage > totalPages) currentPage = totalPages || 1;
+            if (currentPage < 1) currentPage = 1;
+
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            displayedData = filteredData.slice(startIndex, endIndex);
+        }
+
+        // Update UI
+        renderMediaTable(displayedData);
+        updatePagination();
+        updateStats(filteredData);
+        updateSelectionUI();
+        updateSortIndicators();
+    }
+
+    // Updated updatePagination function
+    function updatePagination() {
+        const perPageValue = elements.perPage.value;
+
+        if (perPageValue === 'ALL') {
+            elements.paginationMain.textContent = 'Showing All Results';
+            elements.paginationDetails.textContent = `Displaying all ${filteredData.length.toLocaleString()} filtered entries (${totalItems.toLocaleString()} total)`;
+
+            // Hide pagination controls
+            elements.prevBtn.style.display = 'none';
+            elements.nextBtn.style.display = 'none';
+            elements.pageJump.parentElement.style.display = 'none';
+        } else {
+            const itemsPerPage = parseInt(perPageValue);
+            const startItem = (currentPage - 1) * itemsPerPage + 1;
+            const endItem = Math.min(currentPage * itemsPerPage, filteredData.length);
+
+            elements.paginationMain.textContent = `Page ${currentPage} of ${totalPages}`;
+            elements.paginationDetails.textContent = `Showing ${startItem.toLocaleString()} to ${endItem.toLocaleString()} of ${filteredData.length.toLocaleString()} entries`;
+
+            elements.prevBtn.disabled = currentPage <= 1;
+            elements.nextBtn.disabled = currentPage >= totalPages;
+            elements.pageJump.max = totalPages;
+            elements.pageJump.placeholder = currentPage.toString();
+
+            // Show pagination controls
+            elements.prevBtn.style.display = 'inline-block';
+            elements.nextBtn.style.display = 'inline-block';
+            elements.pageJump.parentElement.style.display = 'flex';
         }
     }
 
+    // Updated stats function
+    function updateStats(filteredDataParam) {
+        elements.filteredItems.textContent = filteredDataParam.length.toLocaleString();
+
+        const cmafEnabled = filteredDataParam.filter(item => getCMAFStatus(item) === 'Enabled').length;
+        elements.cmafCount.textContent = cmafEnabled.toLocaleString();
+
+        if (allStats.premiumFeatures) {
+            const encodedFeature = allStats.premiumFeatures.find(f =>
+                f.feature && f.feature.toLowerCase().includes('encode')
+            );
+            elements.encodedCount.textContent = encodedFeature ? encodedFeature.count.toLocaleString() : '0';
+        }
+    }
+
+    // Updated selection functions
     function selectAllVisibleOnCurrentPage() {
-        // Add all visible items on current page to selection
-        filteredData.forEach(item => {
+        displayedData.forEach(item => {
             selectedRows.add(getRowId(item));
         });
         updateSelectionUI();
     }
 
     function deselectAllVisibleOnCurrentPage() {
-        // Remove all visible items on current page from selection
-        filteredData.forEach(item => {
+        displayedData.forEach(item => {
             selectedRows.delete(getRowId(item));
         });
         updateSelectionUI();
     }
 
     async function selectAllFiltered() {
-        // Show loading state
         elements.selectAllBtn.disabled = true;
         elements.selectAllBtn.textContent = '🔄 Loading...';
 
         try {
-            // Load all filtered data
-            await loadAllFilteredData();
-
-            // Add all filtered items to selection (don't clear existing)
-            allFilteredData.forEach(item => {
+            // Select all filtered items
+            filteredData.forEach(item => {
                 selectedRows.add(getRowId(item));
             });
 
             updateSelectionUI();
         } catch (error) {
             console.error('Error selecting all filtered:', error);
+            alert('Error selecting all items. Please try again.');
         } finally {
             elements.selectAllBtn.disabled = false;
             elements.selectAllBtn.textContent = '✅ Select All Filtered';
         }
     }
 
-    function clearSelection() {
-        selectedRows.clear();
-        updateSelectionUI();
-    }
-
-    function toggleRowSelection(id) {
-        if (selectedRows.has(id)) {
-            selectedRows.delete(id);
-        } else {
-            selectedRows.add(id);
-        }
-        updateSelectionUI();
-    }
-
+    // Updated selection UI
     function updateSelectionUI() {
         const count = selectedRows.size;
         elements.selectionCount.textContent = `${count} selected`;
 
-        // Update header checkbox state based on current page
-        const totalVisible = filteredData.length;
-        const selectedVisibleIds = filteredData.map(item => getRowId(item));
+        const totalVisible = displayedData.length;
+        const selectedVisibleIds = displayedData.map(item => getRowId(item));
         const selectedVisible = selectedVisibleIds.filter(id => selectedRows.has(id)).length;
 
         if (selectedVisible === 0) {
@@ -1312,7 +1374,6 @@
             elements.selectAllCheckbox.indeterminate = true;
         }
 
-        // Update row checkboxes and highlighting
         document.querySelectorAll('.media-table tbody tr').forEach(row => {
             const checkbox = row.querySelector('.row-checkbox');
             if (checkbox) {
@@ -1328,57 +1389,20 @@
         });
     }
 
-    // Load all filtered data for export
-    async function loadAllFilteredData() {
-        try {
-            let page = 1;
-            const limit = 1000; // Use 1000 for efficiency when loading all data
-            allFilteredData = [];
-
-            while (true) {
-                const params = buildQueryParams(page, limit);
-                const response = await fetch(`${API_BASE}/items?${params}`);
-                const result = await response.json();
-
-                if (!result.success) {
-                    throw new Error(result.error || 'Failed to load data');
-                }
-
-                const filtered = applyFilters(result.data);
-                allFilteredData.push(...filtered);
-
-                if (result.data.length < limit) {
-                    break; // No more data
-                }
-
-                page++;
-            }
-        } catch (error) {
-            console.error('Error loading all filtered data:', error);
-            throw error;
-        }
-    }
-
-    // CSV Export functionality
+    // Updated CSV export - much simpler now
     async function exportToCsv() {
         elements.exportCsvBtn.disabled = true;
         elements.exportCsvBtn.textContent = '🔄 Loading...';
 
         try {
-            // If we have selections, use those; otherwise export all filtered data
             let dataToExport;
 
             if (selectedRows.size > 0) {
-                // Load all filtered data if not already loaded
-                if (allFilteredData.length === 0) {
-                    await loadAllFilteredData();
-                }
-                // Export only selected items
-                dataToExport = allFilteredData.filter(item => selectedRows.has(getRowId(item)));
+                // Export only selected items from filtered data
+                dataToExport = filteredData.filter(item => selectedRows.has(getRowId(item)));
             } else {
                 // Export all filtered data
-                await loadAllFilteredData();
-                dataToExport = allFilteredData;
+                dataToExport = filteredData;
             }
 
             if (dataToExport.length === 0) {
@@ -1387,16 +1411,8 @@
             }
 
             const headers = [
-                'Title',
-                'Series',
-                'Season',
-                'Episode',
-                'Content Type',
-                'Availability',
-                'Features',
-                'CMAF Status',
-                'Updated',
-                'GUID'
+                'Title', 'Series', 'Season', 'Episode', 'Content Type',
+                'Availability', 'Features', 'CMAF Status', 'Updated', 'GUID'
             ];
 
             const csvContent = [
@@ -1434,6 +1450,172 @@
         }
     }
 
+    // Updated filter reload function
+    function applyFiltersAndReload() {
+        currentPage = 1; // Reset to first page when filters change
+        selectedRows.clear(); // Clear selections when filters change
+        applyFiltersAndPagination(); // Apply filters and update display
+    }
+
+    // Updated event listeners
+    function setupEventListeners() {
+        let searchTimeout;
+        elements.search.addEventListener('input', () => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                currentPage = 1;
+                selectedRows.clear();
+                applyFiltersAndPagination();
+            }, 500);
+        });
+
+        elements.perPage.addEventListener('change', () => {
+            currentPage = 1;
+            applyFiltersAndPagination(); // Don't clear selections when changing page size
+        });
+
+        elements.prevBtn.addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                applyFiltersAndPagination();
+            }
+        });
+
+        elements.nextBtn.addEventListener('click', () => {
+            if (currentPage < totalPages) {
+                currentPage++;
+                applyFiltersAndPagination();
+            }
+        });
+
+        elements.pageJump.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                jumpToPage(e.target.value);
+                e.target.value = '';
+            }
+        });
+
+        elements.pageJump.addEventListener('blur', (e) => {
+            if (e.target.value) {
+                jumpToPage(e.target.value);
+                e.target.value = '';
+            }
+        });
+    }
+
+    function jumpToPage(pageNum) {
+        const page = parseInt(pageNum);
+        if (page >= 1 && page <= totalPages && page !== currentPage) {
+            currentPage = page;
+            applyFiltersAndPagination();
+        }
+    }
+
+    // Updated sorting handler
+    function initializeColumnSorting() {
+        const sortableHeaders = document.querySelectorAll('.sortable');
+
+        sortableHeaders.forEach(header => {
+            header.addEventListener('click', (e) => {
+                if (isResizing) return;
+
+                const rect = header.getBoundingClientRect();
+                const isRightEdge = e.clientX >= rect.right - 8;
+                if (isRightEdge) return;
+
+                const sortColumn = header.getAttribute('data-sort');
+
+                if (currentSort.column === sortColumn) {
+                    currentSort.direction = currentSort.direction === 'ASC' ? 'DESC' : 'ASC';
+                } else {
+                    currentSort.column = sortColumn;
+                    currentSort.direction = 'ASC';
+                }
+
+                updateSortIndicators();
+                currentPage = 1;
+
+                // If we have data, just re-sort client-side, otherwise reload from server
+                if (allData.length > 0) {
+                    sortAllData();
+                    applyFiltersAndPagination();
+                } else {
+                    loadData();
+                }
+            });
+        });
+    }
+
+    // New function to sort all data client-side
+    function sortAllData() {
+        allData.sort((a, b) => {
+            let aVal = a[currentSort.column];
+            let bVal = b[currentSort.column];
+
+            // Handle null/undefined values
+            if (aVal === null || aVal === undefined) aVal = '';
+            if (bVal === null || bVal === undefined) bVal = '';
+
+            // Convert to string for comparison
+            aVal = aVal.toString().toLowerCase();
+            bVal = bVal.toString().toLowerCase();
+
+            if (currentSort.direction === 'ASC') {
+                return aVal.localeCompare(bVal);
+            } else {
+                return bVal.localeCompare(aVal);
+            }
+        });
+    }
+
+    function updateSortIndicators() {
+        document.querySelectorAll('.sortable').forEach(header => {
+            const sortColumn = header.getAttribute('data-sort');
+            const indicator = header.querySelector('.sort-indicator');
+
+            header.classList.remove('sort-active');
+
+            if (sortColumn === currentSort.column) {
+                header.classList.add('sort-active');
+                indicator.textContent = currentSort.direction === 'ASC' ? '↑' : '↓';
+            } else {
+                indicator.textContent = '⇅';
+            }
+        });
+    }
+
+    // Selection functionality
+    function initializeSelection() {
+        elements.selectAllCheckbox.addEventListener('change', handleSelectAll);
+        elements.selectAllBtn.addEventListener('click', selectAllFiltered);
+        elements.clearSelectionBtn.addEventListener('click', clearSelection);
+        elements.exportCsvBtn.addEventListener('click', exportToCsv);
+    }
+
+    function handleSelectAll(e) {
+        const isChecked = e.target.checked;
+        if (isChecked) {
+            selectAllVisibleOnCurrentPage();
+        } else {
+            deselectAllVisibleOnCurrentPage();
+        }
+    }
+
+    function clearSelection() {
+        selectedRows.clear();
+        updateSelectionUI();
+    }
+
+    function toggleRowSelection(id) {
+        if (selectedRows.has(id)) {
+            selectedRows.delete(id);
+        } else {
+            selectedRows.add(id);
+        }
+        updateSelectionUI();
+    }
+
+    // Helper functions for CSV export
     function escapeCSV(str) {
         if (str === null || str === undefined) return '';
         str = str.toString();
@@ -1449,11 +1631,20 @@
         return date.toISOString();
     }
 
-    // Dynamic feature rendering based on column width
+    // Helper functions for rendering
+    function getCMAFStatus(item) {
+        const features = item.premium_features || [];
+        const hasCMAFFeatures = features.some(f =>
+            f.toLowerCase().includes('cmaf') ||
+            f.toLowerCase().includes('dash') ||
+            f.toLowerCase().includes('hls')
+        );
+        return hasCMAFFeatures ? 'Enabled' : 'Disabled';
+    }
+
     function renderFeatureTags(features, columnWidth) {
         if (!features || features.length === 0) return '<span style="color: var(--text-muted);">N/A</span>';
 
-        // Sort features alphabetically for consistent display
         const sortedFeatures = [...features].sort((a, b) => a.localeCompare(b));
 
         const tagWidth = 60;
@@ -1472,98 +1663,12 @@
         return html;
     }
 
-    // Initialize column header resizing
-    function initializeColumnResizing() {
-        const headers = document.querySelectorAll('.media-table th.resizable');
-
-        headers.forEach(header => {
-            header.addEventListener('mousedown', handleMouseDown);
-        });
-
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
-    }
-
-    function handleMouseDown(e) {
-        const rect = e.target.getBoundingClientRect();
-        const isRightEdge = e.clientX >= rect.right - 8;
-
-        if (isRightEdge) {
-            e.preventDefault();
-            isResizing = true;
-            currentColumn = e.target;
-            startX = e.clientX;
-            startWidth = parseInt(window.getComputedStyle(currentColumn).width, 10);
-            currentColumn.classList.add('resizing');
-            document.body.style.cursor = 'col-resize';
-            document.body.style.userSelect = 'none';
-            elements.resizeLine.style.display = 'block';
-            elements.resizeLine.style.left = e.clientX + 'px';
-        }
-    }
-
-    function handleMouseMove(e) {
-        if (!isResizing) {
-            const target = e.target;
-            if (target.classList.contains('resizable')) {
-                const rect = target.getBoundingClientRect();
-                const isRightEdge = e.clientX >= rect.right - 8;
-                target.style.cursor = isRightEdge ? 'col-resize' : 'pointer';
-            }
-            return;
-        }
-
-        const width = startWidth + (e.clientX - startX);
-        const minWidth = 60;
-        const maxWidth = 500;
-        const clampedWidth = Math.max(minWidth, Math.min(maxWidth, width));
-
-        if (clampedWidth >= minWidth) {
-            currentColumn.style.width = clampedWidth + 'px';
-            elements.resizeLine.style.left = e.clientX + 'px';
-
-            const columnName = currentColumn.getAttribute('data-column');
-            updateColumnWidth(columnName, clampedWidth);
-        }
-    }
-
-    function handleMouseUp() {
-        if (isResizing) {
-            isResizing = false;
-            currentColumn.classList.remove('resizing');
-
-            if (currentColumn.getAttribute('data-column') === 'features') {
-                renderMediaTable(filteredData);
-            }
-
-            currentColumn = null;
-            document.body.style.cursor = 'default';
-            document.body.style.userSelect = 'auto';
-            elements.resizeLine.style.display = 'none';
-        }
-    }
-
-    function updateColumnWidth(columnName, width) {
-        const className = `.col-${columnName}`;
-        const elementsToUpdate = document.querySelectorAll(className);
-
-        elementsToUpdate.forEach(element => {
-            element.style.width = `${width}px`;
-        });
-    }
-
-    // Deep linking functionality
-    function createVideoRobotDeeplink(guid) {
-        if (!guid || guid === 'N/A') return null;
-        return `https://videorobot-ent.paramountplus.com/jobs/show_jobs?limit=25&offset=0&order_by=desc&sort_by=id&bu=all&show_qc=true&ref_id=${guid}`;
-    }
-
     function renderGUIDWithLink(guid) {
         if (!guid || guid === 'N/A') {
             return `<span class="guid-text">${guid}</span>`;
         }
 
-        const deeplink = createVideoRobotDeeplink(guid);
+        const deeplink = `https://videorobot-ent.paramountplus.com/jobs/show_jobs?limit=25&offset=0&order_by=desc&sort_by=id&bu=all&show_qc=true&ref_id=${guid}`;
         const displayGuid = guid.length > 18 ? guid.substring(0, 15) + '...' : guid;
 
         return `
@@ -1593,14 +1698,104 @@
         });
     }
 
-    function getCMAFStatus(item) {
-        const features = item.premium_features || [];
-        const hasCMAFFeatures = features.some(f =>
-            f.toLowerCase().includes('cmaf') ||
-            f.toLowerCase().includes('dash') ||
-            f.toLowerCase().includes('hls')
-        );
-        return hasCMAFFeatures ? 'Enabled' : 'Disabled';
+    function renderMediaTable(data) {
+        elements.mediaTbody.innerHTML = data.map(item => {
+            const title = item.title || 'N/A';
+            const series = item.series_title || 'N/A';
+            const guid = item.guid || 'N/A';
+            const cmafStatus = getCMAFStatus(item);
+            const itemId = getRowId(item);
+
+            const featuresColumn = document.querySelector('.col-features');
+            const featuresWidth = featuresColumn ? parseInt(getComputedStyle(featuresColumn).width) : 180;
+
+            return `
+                <tr>
+                    <td class="col-select">
+                        <input type="checkbox" class="row-checkbox row-select"
+                               data-id="${itemId}"
+                               onchange="toggleRowSelection('${itemId}')">
+                    </td>
+                    <td class="col-title" title="${title}">${title.length > 35 ? title.substring(0, 32) + '...' : title}</td>
+                    <td class="col-series" title="${series}">${series.length > 25 ? series.substring(0, 22) + '...' : series}</td>
+                    <td class="col-season-episode">
+                        ${item.season_number ? `S${item.season_number}` : ''}
+                        ${item.episode_number ? `E${item.episode_number}` : ''}
+                    </td>
+                    <td class="col-type">${renderContentTypeBadge(item.content_type)}</td>
+                    <td class="col-availability">${renderAvailabilityBadge(item.availability_state)}</td>
+                    <td class="col-features">${renderFeatureTags(item.premium_features, featuresWidth)}</td>
+                    <td class="col-cmaf">${renderCMAFIndicator(cmafStatus)}</td>
+                    <td class="col-updated">${formatDate(item.updated_timestamp)}</td>
+                    <td class="col-guid">${renderGUIDWithLink(guid)}</td>
+                </tr>
+            `;
+        }).join('');
+
+        if (data.length === 0) {
+            elements.mediaTbody.innerHTML = `
+                <tr>
+                    <td colspan="10" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                        No media items found matching the current filters.
+                    </td>
+                </tr>
+            `;
+        }
+
+        updateSelectionUI();
+    }
+
+    // Helper functions
+    function formatDate(timestamp) {
+        if (!timestamp) return 'N/A';
+        const date = new Date(parseInt(timestamp));
+        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    }
+
+    function renderCMAFIndicator(status) {
+        const isEnabled = status === 'Enabled';
+        return `<span class="cmaf-indicator ${isEnabled ? 'cmaf-enabled' : 'cmaf-disabled'}">
+            ${isEnabled ? '✅' : '❌'} ${status}
+        </span>`;
+    }
+
+    function renderContentTypeBadge(type) {
+        if (!type) return '<span style="color: var(--text-muted);">N/A</span>';
+        return `<span class="content-type-badge">${type}</span>`;
+    }
+
+    function renderAvailabilityBadge(state) {
+        if (!state) return `<span class="availability-badge unknown">Unknown</span>`;
+        const className = state.toLowerCase().includes('available') ? 'available' :
+            state.toLowerCase().includes('unavailable') ? 'unavailable' : 'unknown';
+        return `<span class="availability-badge ${className}">${state}</span>`;
+    }
+
+    // Apply filters to data
+    function applyFilters(data) {
+        return data.filter(item => {
+            return Object.keys(activeFilters).every(filterType => {
+                const filterSet = activeFilters[filterType];
+                if (filterSet.size === 0) return true;
+
+                const config = filterConfigs[filterType];
+
+                if (config.isComputed && filterType === 'cmaf') {
+                    const cmafStatus = getCMAFStatus(item);
+                    return filterSet.has(cmafStatus);
+                }
+
+                let itemValue = item[config.field];
+
+                if (config.isArray && Array.isArray(itemValue)) {
+                    return itemValue.some(val => filterSet.has(val.toString()));
+                } else if (itemValue !== null && itemValue !== undefined) {
+                    return filterSet.has(itemValue.toString());
+                }
+
+                return false;
+            });
+        });
     }
 
     // Initialize multi-select functionality
@@ -1745,7 +1940,7 @@
     function getUniqueValues(config, filterType) {
         const values = new Set();
 
-        currentData.forEach(item => {
+        allData.forEach(item => {
             if (config.isComputed && filterType === 'cmaf') {
                 values.add(getCMAFStatus(item));
             } else {
@@ -1845,37 +2040,83 @@
         applyFiltersAndReload();
     }
 
-    function applyFiltersAndReload() {
-        currentPage = 1;
-        selectedRows.clear(); // Only clear when filters change
-        allFilteredData = []; // Reset cached filtered data
-        loadData();
+    // Column resizing functionality
+    function initializeColumnResizing() {
+        const headers = document.querySelectorAll('.media-table th.resizable');
+
+        headers.forEach(header => {
+            header.addEventListener('mousedown', handleMouseDown);
+        });
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
     }
 
-    // Apply filters to data
-    function applyFilters(data) {
-        return data.filter(item => {
-            return Object.keys(activeFilters).every(filterType => {
-                const filterSet = activeFilters[filterType];
-                if (filterSet.size === 0) return true;
+    function handleMouseDown(e) {
+        const rect = e.target.getBoundingClientRect();
+        const isRightEdge = e.clientX >= rect.right - 8;
 
-                const config = filterConfigs[filterType];
+        if (isRightEdge) {
+            e.preventDefault();
+            isResizing = true;
+            currentColumn = e.target;
+            startX = e.clientX;
+            startWidth = parseInt(window.getComputedStyle(currentColumn).width, 10);
+            currentColumn.classList.add('resizing');
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+            elements.resizeLine.style.display = 'block';
+            elements.resizeLine.style.left = e.clientX + 'px';
+        }
+    }
 
-                if (config.isComputed && filterType === 'cmaf') {
-                    const cmafStatus = getCMAFStatus(item);
-                    return filterSet.has(cmafStatus);
-                }
+    function handleMouseMove(e) {
+        if (!isResizing) {
+            const target = e.target;
+            if (target.classList.contains('resizable')) {
+                const rect = target.getBoundingClientRect();
+                const isRightEdge = e.clientX >= rect.right - 8;
+                target.style.cursor = isRightEdge ? 'col-resize' : 'pointer';
+            }
+            return;
+        }
 
-                let itemValue = item[config.field];
+        const width = startWidth + (e.clientX - startX);
+        const minWidth = 60;
+        const maxWidth = 500;
+        const clampedWidth = Math.max(minWidth, Math.min(maxWidth, width));
 
-                if (config.isArray && Array.isArray(itemValue)) {
-                    return itemValue.some(val => filterSet.has(val.toString()));
-                } else if (itemValue !== null && itemValue !== undefined) {
-                    return filterSet.has(itemValue.toString());
-                }
+        if (clampedWidth >= minWidth) {
+            currentColumn.style.width = clampedWidth + 'px';
+            elements.resizeLine.style.left = e.clientX + 'px';
 
-                return false;
-            });
+            const columnName = currentColumn.getAttribute('data-column');
+            updateColumnWidth(columnName, clampedWidth);
+        }
+    }
+
+    function handleMouseUp() {
+        if (isResizing) {
+            isResizing = false;
+            currentColumn.classList.remove('resizing');
+
+            if (currentColumn.getAttribute('data-column') === 'features') {
+                renderMediaTable(displayedData);
+            }
+
+            currentColumn = null;
+            document.body.style.cursor = 'default';
+            document.body.style.userSelect = 'auto';
+            elements.resizeLine.style.display = 'none';
+        }
+    }
+
+    function updateColumnWidth(columnName, width) {
+        const className = `.col-${columnName}`;
+        const elementsToUpdate = document.querySelectorAll(className);
+
+        elementsToUpdate.forEach(element => {
+            element.style.width = `${width}px`;
         });
     }
 
@@ -1889,291 +2130,10 @@
                 allStats = result.data;
                 elements.totalItemsSpan.textContent = result.data.totalItems.toLocaleString();
                 elements.totalSeries.textContent = result.data.totalSeries.toLocaleString();
-                totalFilteredItems = result.data.totalItems; // Initialize with total
             }
         } catch (error) {
             console.error('Error loading filters:', error);
         }
-    }
-
-    // Build query parameters
-    function buildQueryParams(page = currentPage, limit = null) {
-        const params = new URLSearchParams();
-        params.append('page', page);
-
-        const perPageValue = limit || elements.perPage.value;
-        if (perPageValue === 'ALL') {
-            params.append('limit', '10000'); // Use a very high limit for ALL
-        } else {
-            params.append('limit', perPageValue);
-        }
-
-        if (elements.search.value.trim()) {
-            params.append('search', elements.search.value.trim());
-        }
-
-        params.append('sortBy', currentSort.column);
-        params.append('sortOrder', currentSort.direction);
-
-        return params;
-    }
-
-    // Load media data
-    async function loadData() {
-        if (isLoading) return;
-
-        isLoading = true;
-        elements.loading.style.display = 'block';
-        elements.error.style.display = 'none';
-        elements.tableWrapper.style.display = 'none';
-        elements.pagination.style.display = 'none';
-
-        try {
-            const params = buildQueryParams();
-            const response = await fetch(`${API_BASE}/items?${params}`);
-            const result = await response.json();
-
-            if (result.success) {
-                totalPages = result.pagination.totalPages;
-                currentPage = result.pagination.currentPage;
-                totalItems = result.pagination.totalItems;
-                currentData = result.data;
-
-                // Apply client-side filters
-                filteredData = applyFilters(result.data);
-
-                // Update total filtered items count for pagination display
-                if (elements.perPage.value === 'ALL' || hasActiveFilters()) {
-                    // For ALL or when filters are active, count all filtered results
-                    totalFilteredItems = await getTotalFilteredCount();
-                } else {
-                    totalFilteredItems = totalItems;
-                }
-
-                renderMediaTable(filteredData);
-                updatePagination(result.pagination);
-                updateStats(filteredData);
-                updateSelectionUI(); // This will maintain selections across pages
-                updateSortIndicators();
-
-                elements.loading.style.display = 'none';
-                elements.tableWrapper.style.display = 'block';
-                elements.pagination.style.display = 'flex';
-            } else {
-                throw new Error(result.error || 'Failed to load data');
-            }
-        } catch (error) {
-            elements.loading.style.display = 'none';
-            elements.error.style.display = 'block';
-            elements.error.textContent = 'Error loading data: ' + error.message;
-        }
-
-        isLoading = false;
-    }
-
-    // Check if any filters are active
-    function hasActiveFilters() {
-        return Object.values(activeFilters).some(filterSet => filterSet.size > 0) ||
-            elements.search.value.trim() !== '';
-    }
-
-    // Get total count of filtered results
-    async function getTotalFilteredCount() {
-        try {
-            // If we already loaded all filtered data, return that count
-            if (allFilteredData.length > 0) {
-                return allFilteredData.length;
-            }
-
-            // Otherwise, make a quick count query (if no filters, return totalItems)
-            if (!hasActiveFilters()) {
-                return totalItems;
-            }
-
-            // For now, use the current page's filtered count as an estimate
-            // In a real application, you might want to make a separate count query
-            return filteredData.length;
-        } catch (error) {
-            console.error('Error getting total filtered count:', error);
-            return totalItems;
-        }
-    }
-
-    // Render media table
-    function renderMediaTable(data) {
-        elements.mediaTbody.innerHTML = data.map(item => {
-            const title = item.title || 'N/A';
-            const series = item.series_title || 'N/A';
-            const guid = item.guid || 'N/A';
-            const cmafStatus = getCMAFStatus(item);
-            const itemId = getRowId(item);
-
-            const featuresColumn = document.querySelector('.col-features');
-            const featuresWidth = featuresColumn ? parseInt(getComputedStyle(featuresColumn).width) : 180;
-
-            return `
-                <tr>
-                    <td class="col-select">
-                        <input type="checkbox" class="row-checkbox row-select"
-                               data-id="${itemId}"
-                               onchange="toggleRowSelection('${itemId}')">
-                    </td>
-                    <td class="col-title" title="${title}">${title.length > 35 ? title.substring(0, 32) + '...' : title}</td>
-                    <td class="col-series" title="${series}">${series.length > 25 ? series.substring(0, 22) + '...' : series}</td>
-                    <td class="col-season-episode">
-                        ${item.season_number ? `S${item.season_number}` : ''}
-                        ${item.episode_number ? `E${item.episode_number}` : ''}
-                    </td>
-                    <td class="col-type">${renderContentTypeBadge(item.content_type)}</td>
-                    <td class="col-availability">${renderAvailabilityBadge(item.availability_state)}</td>
-                    <td class="col-features">${renderFeatureTags(item.premium_features, featuresWidth)}</td>
-                    <td class="col-cmaf">${renderCMAFIndicator(cmafStatus)}</td>
-                    <td class="col-updated">${formatDate(item.updated_timestamp)}</td>
-                    <td class="col-guid">${renderGUIDWithLink(guid)}</td>
-                </tr>
-            `;
-        }).join('');
-
-        if (data.length === 0) {
-            elements.mediaTbody.innerHTML = `
-                <tr>
-                    <td colspan="10" style="text-align: center; padding: 2rem; color: var(--text-muted);">
-                        No media items found matching the current filters.
-                    </td>
-                </tr>
-            `;
-        }
-
-        // Update selection UI after rendering - this maintains state across pages
-        updateSelectionUI();
-    }
-
-    // Helper functions
-    function formatDate(timestamp) {
-        if (!timestamp) return 'N/A';
-        const date = new Date(parseInt(timestamp));
-        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-    }
-
-    function renderCMAFIndicator(status) {
-        const isEnabled = status === 'Enabled';
-        return `<span class="cmaf-indicator ${isEnabled ? 'cmaf-enabled' : 'cmaf-disabled'}">
-            ${isEnabled ? '✅' : '❌'} ${status}
-        </span>`;
-    }
-
-    function renderContentTypeBadge(type) {
-        if (!type) return '<span style="color: var(--text-muted);">N/A</span>';
-        return `<span class="content-type-badge">${type}</span>`;
-    }
-
-    function renderAvailabilityBadge(state) {
-        if (!state) return `<span class="availability-badge unknown">Unknown</span>`;
-        const className = state.toLowerCase().includes('available') ? 'available' :
-            state.toLowerCase().includes('unavailable') ? 'unavailable' : 'unknown';
-        return `<span class="availability-badge ${className}">${state}</span>`;
-    }
-
-    function updatePagination(pagination) {
-        const perPageValue = elements.perPage.value;
-
-        if (perPageValue === 'ALL') {
-            // When showing ALL, hide pagination controls
-            elements.paginationMain.textContent = 'Showing All Results';
-            elements.paginationDetails.textContent = `Displaying all ${totalFilteredItems.toLocaleString()} entries`;
-            elements.prevBtn.style.display = 'none';
-            elements.nextBtn.style.display = 'none';
-            elements.pageJump.parentElement.style.display = 'none';
-        } else {
-            // Normal pagination
-            const itemsPerPage = parseInt(perPageValue);
-            const startItem = (pagination.currentPage - 1) * itemsPerPage + 1;
-            const endItem = Math.min(pagination.currentPage * itemsPerPage, pagination.totalItems);
-
-            elements.paginationMain.textContent = `Page ${pagination.currentPage} of ${pagination.totalPages}`;
-            elements.paginationDetails.textContent = `Showing ${startItem.toLocaleString()} to ${endItem.toLocaleString()} of ${totalFilteredItems.toLocaleString()} entries`;
-
-            elements.prevBtn.disabled = !pagination.hasPrev;
-            elements.nextBtn.disabled = !pagination.hasNext;
-            elements.pageJump.max = pagination.totalPages;
-            elements.pageJump.placeholder = pagination.currentPage.toString();
-
-            // Show pagination controls
-            elements.prevBtn.style.display = 'inline-block';
-            elements.nextBtn.style.display = 'inline-block';
-            elements.pageJump.parentElement.style.display = 'flex';
-        }
-    }
-
-    function updateStats(filteredDataParam) {
-        elements.filteredItems.textContent = totalFilteredItems.toLocaleString();
-
-        const cmafEnabled = filteredDataParam.filter(item => getCMAFStatus(item) === 'Enabled').length;
-        elements.cmafCount.textContent = cmafEnabled.toLocaleString();
-
-        if (allStats.premiumFeatures) {
-            const encodedFeature = allStats.premiumFeatures.find(f =>
-                f.feature && f.feature.toLowerCase().includes('encode')
-            );
-            elements.encodedCount.textContent = encodedFeature ? encodedFeature.count.toLocaleString() : '0';
-        }
-    }
-
-    function jumpToPage(pageNum) {
-        const page = parseInt(pageNum);
-        if (page >= 1 && page <= totalPages && page !== currentPage) {
-            currentPage = page;
-            loadData(); // Selections persist across page changes
-        }
-    }
-
-    // Event listeners
-    function setupEventListeners() {
-        let searchTimeout;
-        elements.search.addEventListener('input', () => {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                currentPage = 1;
-                selectedRows.clear(); // Clear selections when search changes
-                allFilteredData = [];
-                loadData();
-            }, 500);
-        });
-
-        elements.perPage.addEventListener('change', () => {
-            currentPage = 1;
-            // Don't clear selections when changing page size
-            allFilteredData = [];
-            loadData();
-        });
-
-        elements.prevBtn.addEventListener('click', () => {
-            if (currentPage > 1) {
-                currentPage--;
-                loadData(); // Selections persist
-            }
-        });
-
-        elements.nextBtn.addEventListener('click', () => {
-            if (currentPage < totalPages) {
-                currentPage++;
-                loadData(); // Selections persist
-            }
-        });
-
-        elements.pageJump.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                jumpToPage(e.target.value);
-                e.target.value = '';
-            }
-        });
-
-        elements.pageJump.addEventListener('blur', (e) => {
-            if (e.target.value) {
-                jumpToPage(e.target.value);
-                e.target.value = '';
-            }
-        });
     }
 
     // Initialize dashboard
