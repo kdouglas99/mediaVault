@@ -287,11 +287,6 @@
             background: var(--accent);
         }
 
-        .filter-chip.streaming-chip {
-            background: var(--warning);
-            color: var(--text-dark);
-        }
-
         @keyframes slideIn {
             from { opacity: 0; transform: translateY(-10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -460,10 +455,10 @@
             width: 100%;
             border-collapse: collapse;
             table-layout: fixed;
-            min-width: 1700px;
+            min-width: 1500px;
         }
 
-        /* Resizable column headers */
+        /* Sortable column headers */
         .media-table th {
             background: var(--surface-2);
             padding: 1rem 0.75rem;
@@ -483,6 +478,27 @@
 
         .media-table th:last-child {
             border-right: none;
+        }
+
+        .media-table th.sortable {
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .media-table th.sortable:hover {
+            background: color-mix(in oklab, var(--surface-2), var(--primary) 8%);
+        }
+
+        .media-table th.sortable .sort-indicator {
+            margin-left: 0.5rem;
+            font-size: 0.8rem;
+            opacity: 0.5;
+            transition: opacity 0.2s ease;
+        }
+
+        .media-table th.sortable.sort-active .sort-indicator {
+            opacity: 1;
+            color: var(--primary);
         }
 
         .media-table th.resizable::after {
@@ -541,7 +557,6 @@
         .col-type { width: 120px; }
         .col-availability { width: 140px; }
         .col-features { width: 180px; }
-        .col-streaming-properties { width: 180px; }
         .col-cmaf { width: 100px; }
         .col-updated { width: 160px; }
         .col-guid { width: 200px; }
@@ -575,22 +590,6 @@
         .feature-tag {
             background: var(--accent);
             color: white;
-            padding: 0.15rem 0.4rem;
-            border-radius: 999px;
-            font-size: 0.7rem;
-            font-weight: 600;
-            white-space: nowrap;
-        }
-
-        .streaming-property-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.25rem;
-        }
-
-        .streaming-property-tag {
-            background: var(--warning);
-            color: var(--text-dark);
             padding: 0.15rem 0.4rem;
             border-radius: 999px;
             font-size: 0.7rem;
@@ -853,20 +852,11 @@
             </div>
 
             <div class="control-group">
-                <label for="sort-by">📊 Sort By</label>
-                <select id="sort-by">
-                    <option value="title">Title</option>
-                    <option value="series_title">Series</option>
-                    <option value="created_at">Date Added</option>
-                    <option value="updated_timestamp">Last Updated</option>
-                </select>
-            </div>
-
-            <div class="control-group">
-                <label for="sort-order">🔄 Order</label>
-                <select id="sort-order">
-                    <option value="ASC">Ascending</option>
-                    <option value="DESC">Descending</option>
+                <label for="per-page">📄 Items per Page</label>
+                <select id="per-page">
+                    <option value="25">25</option>
+                    <option value="50" selected>50</option>
+                    <option value="100">100</option>
                 </select>
             </div>
         </div>
@@ -975,7 +965,7 @@
             <span class="selection-count" id="selection-count">0 selected</span>
         </div>
         <div class="selection-actions">
-            <button class="select-all-btn" id="select-all-btn">✅ Select All</button>
+            <button class="select-all-btn" id="select-all-btn">✅ Select All Filtered</button>
             <button class="clear-selection-btn" id="clear-selection-btn">❌ Clear Selection</button>
             <button class="export-csv-btn" id="export-csv-btn">📊 Export to CSV</button>
         </div>
@@ -1017,14 +1007,32 @@
                     <th class="col-select">
                         <input type="checkbox" id="select-all-checkbox" class="row-select">
                     </th>
-                    <th class="col-title resizable" data-column="title">Title</th>
-                    <th class="col-series resizable" data-column="series">Series</th>
-                    <th class="col-season-episode resizable" data-column="season-episode">S/E</th>
-                    <th class="col-type resizable" data-column="type">Type</th>
-                    <th class="col-availability resizable" data-column="availability">Availability</th>
+                    <th class="col-title sortable resizable" data-column="title" data-sort="title">
+                        Title
+                        <span class="sort-indicator">⇅</span>
+                    </th>
+                    <th class="col-series sortable resizable" data-column="series" data-sort="series_title">
+                        Series
+                        <span class="sort-indicator">⇅</span>
+                    </th>
+                    <th class="col-season-episode sortable resizable" data-column="season-episode" data-sort="season_number">
+                        S/E
+                        <span class="sort-indicator">⇅</span>
+                    </th>
+                    <th class="col-type sortable resizable" data-column="type" data-sort="content_type">
+                        Type
+                        <span class="sort-indicator">⇅</span>
+                    </th>
+                    <th class="col-availability sortable resizable" data-column="availability" data-sort="availability_state">
+                        Availability
+                        <span class="sort-indicator">⇅</span>
+                    </th>
                     <th class="col-features resizable" data-column="features">Features</th>
                     <th class="col-cmaf resizable" data-column="cmaf">CMAF</th>
-                    <th class="col-updated resizable" data-column="updated">Updated</th>
+                    <th class="col-updated sortable resizable" data-column="updated" data-sort="updated_timestamp">
+                        Updated
+                        <span class="sort-indicator">⇅</span>
+                    </th>
                     <th class="col-guid" data-column="guid">GUID</th>
                 </tr>
                 </thead>
@@ -1062,8 +1070,15 @@
     let isLoading = false;
     let currentData = [];
     let filteredData = [];
+    let allFilteredData = []; // Store all filtered results for export
     let allStats = {};
-    let selectedRows = new Set();
+    let selectedRows = new Set(); // This persists across page changes
+
+    // Sorting state
+    let currentSort = {
+        column: 'title',
+        direction: 'ASC'
+    };
 
     // Column resizing variables
     let isResizing = false;
@@ -1131,8 +1146,7 @@
         mediaTbody: document.getElementById('media-tbody'),
         pagination: document.getElementById('pagination'),
         search: document.getElementById('search'),
-        sortBy: document.getElementById('sort-by'),
-        sortOrder: document.getElementById('sort-order'),
+        perPage: document.getElementById('per-page'),
         prevBtn: document.getElementById('prev-btn'),
         nextBtn: document.getElementById('next-btn'),
         paginationMain: document.getElementById('pagination-main'),
@@ -1158,10 +1172,57 @@
         return item.external_id || item.id || item.guid || `row_${Math.random().toString(36).substr(2, 9)}`;
     }
 
+    // Initialize column sorting
+    function initializeColumnSorting() {
+        const sortableHeaders = document.querySelectorAll('.sortable');
+
+        sortableHeaders.forEach(header => {
+            header.addEventListener('click', (e) => {
+                // Don't sort when resizing
+                if (isResizing) return;
+
+                const rect = header.getBoundingClientRect();
+                const isRightEdge = e.clientX >= rect.right - 8;
+                if (isRightEdge) return; // Don't sort when clicking resize area
+
+                const sortColumn = header.getAttribute('data-sort');
+
+                // Toggle direction if same column, otherwise default to ASC
+                if (currentSort.column === sortColumn) {
+                    currentSort.direction = currentSort.direction === 'ASC' ? 'DESC' : 'ASC';
+                } else {
+                    currentSort.column = sortColumn;
+                    currentSort.direction = 'ASC';
+                }
+
+                updateSortIndicators();
+                currentPage = 1;
+                // Don't clear selections when sorting - keep them across pages
+                loadData();
+            });
+        });
+    }
+
+    function updateSortIndicators() {
+        document.querySelectorAll('.sortable').forEach(header => {
+            const sortColumn = header.getAttribute('data-sort');
+            const indicator = header.querySelector('.sort-indicator');
+
+            header.classList.remove('sort-active');
+
+            if (sortColumn === currentSort.column) {
+                header.classList.add('sort-active');
+                indicator.textContent = currentSort.direction === 'ASC' ? '↑' : '↓';
+            } else {
+                indicator.textContent = '⇅';
+            }
+        });
+    }
+
     // Selection functionality
     function initializeSelection() {
         elements.selectAllCheckbox.addEventListener('change', handleSelectAll);
-        elements.selectAllBtn.addEventListener('click', selectAllVisible);
+        elements.selectAllBtn.addEventListener('click', selectAllFiltered);
         elements.clearSelectionBtn.addEventListener('click', clearSelection);
         elements.exportCsvBtn.addEventListener('click', exportToCsv);
     }
@@ -1169,22 +1230,49 @@
     function handleSelectAll(e) {
         const isChecked = e.target.checked;
         if (isChecked) {
-            selectAllVisible();
+            selectAllVisibleOnCurrentPage();
         } else {
-            clearSelection();
+            deselectAllVisibleOnCurrentPage();
         }
     }
 
-    function selectAllVisible() {
-        // Clear existing selections first to avoid conflicts
-        selectedRows.clear();
-
-        // Add all visible items to selection
+    function selectAllVisibleOnCurrentPage() {
+        // Add all visible items on current page to selection
         filteredData.forEach(item => {
             selectedRows.add(getRowId(item));
         });
-
         updateSelectionUI();
+    }
+
+    function deselectAllVisibleOnCurrentPage() {
+        // Remove all visible items on current page from selection
+        filteredData.forEach(item => {
+            selectedRows.delete(getRowId(item));
+        });
+        updateSelectionUI();
+    }
+
+    async function selectAllFiltered() {
+        // Show loading state
+        elements.selectAllBtn.disabled = true;
+        elements.selectAllBtn.textContent = '🔄 Loading...';
+
+        try {
+            // Load all filtered data
+            await loadAllFilteredData();
+
+            // Add all filtered items to selection (don't clear existing)
+            allFilteredData.forEach(item => {
+                selectedRows.add(getRowId(item));
+            });
+
+            updateSelectionUI();
+        } catch (error) {
+            console.error('Error selecting all filtered:', error);
+        } finally {
+            elements.selectAllBtn.disabled = false;
+            elements.selectAllBtn.textContent = '✅ Select All Filtered';
+        }
     }
 
     function clearSelection() {
@@ -1205,7 +1293,7 @@
         const count = selectedRows.size;
         elements.selectionCount.textContent = `${count} selected`;
 
-        // Update header checkbox state
+        // Update header checkbox state based on current page
         const totalVisible = filteredData.length;
         const selectedVisibleIds = filteredData.map(item => getRowId(item));
         const selectedVisible = selectedVisibleIds.filter(id => selectedRows.has(id)).length;
@@ -1237,53 +1325,110 @@
         });
     }
 
-    // CSV Export functionality
-    function exportToCsv() {
-        const dataToExport = filteredData;
+    // Load all filtered data for export
+    async function loadAllFilteredData() {
+        try {
+            let page = 1;
+            const limit = 100;
+            allFilteredData = [];
 
-        if (dataToExport.length === 0) {
-            alert('No data to export');
-            return;
+            while (true) {
+                const params = buildQueryParams(page, limit);
+                const response = await fetch(`${API_BASE}/items?${params}`);
+                const result = await response.json();
+
+                if (!result.success) {
+                    throw new Error(result.error || 'Failed to load data');
+                }
+
+                const filtered = applyFilters(result.data);
+                allFilteredData.push(...filtered);
+
+                if (result.data.length < limit) {
+                    break; // No more data
+                }
+
+                page++;
+            }
+        } catch (error) {
+            console.error('Error loading all filtered data:', error);
+            throw error;
         }
+    }
 
-        const headers = [
-            'Title',
-            'Series',
-            'Season',
-            'Episode',
-            'Content Type',
-            'Availability',
-            'Features',
-            'CMAF Status',
-            'Updated',
-            'GUID'
-        ];
+    // CSV Export functionality
+    async function exportToCsv() {
+        elements.exportCsvBtn.disabled = true;
+        elements.exportCsvBtn.textContent = '🔄 Loading...';
 
-        const csvContent = [
-            headers.join(','),
-            ...dataToExport.map(item => [
-                escapeCSV(item.title || ''),
-                escapeCSV(item.series_title || ''),
-                item.season_number || '',
-                item.episode_number || '',
-                escapeCSV(item.content_type || ''),
-                escapeCSV(item.availability_state || ''),
-                escapeCSV((item.premium_features || []).join('; ')),
-                getCMAFStatus(item),
-                formatDateForCSV(item.updated_timestamp),
-                escapeCSV(item.guid || '')
-            ].join(','))
-        ].join('\n');
+        try {
+            // If we have selections, use those; otherwise export all filtered data
+            let dataToExport;
 
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', `media_export_${new Date().toISOString().split('T')[0]}.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+            if (selectedRows.size > 0) {
+                // Load all filtered data if not already loaded
+                if (allFilteredData.length === 0) {
+                    await loadAllFilteredData();
+                }
+                // Export only selected items
+                dataToExport = allFilteredData.filter(item => selectedRows.has(getRowId(item)));
+            } else {
+                // Export all filtered data
+                await loadAllFilteredData();
+                dataToExport = allFilteredData;
+            }
+
+            if (dataToExport.length === 0) {
+                alert('No data to export');
+                return;
+            }
+
+            const headers = [
+                'Title',
+                'Series',
+                'Season',
+                'Episode',
+                'Content Type',
+                'Availability',
+                'Features',
+                'CMAF Status',
+                'Updated',
+                'GUID'
+            ];
+
+            const csvContent = [
+                headers.join(','),
+                ...dataToExport.map(item => [
+                    escapeCSV(item.title || ''),
+                    escapeCSV(item.series_title || ''),
+                    item.season_number || '',
+                    item.episode_number || '',
+                    escapeCSV(item.content_type || ''),
+                    escapeCSV(item.availability_state || ''),
+                    escapeCSV((item.premium_features || []).join('; ')),
+                    getCMAFStatus(item),
+                    formatDateForCSV(item.updated_timestamp),
+                    escapeCSV(item.guid || '')
+                ].join(','))
+            ].join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `media_export_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+        } catch (error) {
+            console.error('Export error:', error);
+            alert('Export failed. Please try again.');
+        } finally {
+            elements.exportCsvBtn.disabled = false;
+            elements.exportCsvBtn.textContent = '📊 Export to CSV';
+        }
     }
 
     function escapeCSV(str) {
@@ -1357,7 +1502,7 @@
             if (target.classList.contains('resizable')) {
                 const rect = target.getBoundingClientRect();
                 const isRightEdge = e.clientX >= rect.right - 8;
-                target.style.cursor = isRightEdge ? 'col-resize' : 'default';
+                target.style.cursor = isRightEdge ? 'col-resize' : 'pointer';
             }
             return;
         }
@@ -1696,7 +1841,8 @@
 
     function applyFiltersAndReload() {
         currentPage = 1;
-        selectedRows.clear(); // Clear selections when filters change
+        selectedRows.clear(); // Only clear when filters change
+        allFilteredData = []; // Reset cached filtered data
         loadData();
     }
 
@@ -1744,17 +1890,17 @@
     }
 
     // Build query parameters
-    function buildQueryParams() {
+    function buildQueryParams(page = currentPage, limit = null) {
         const params = new URLSearchParams();
-        params.append('page', currentPage);
-        params.append('limit', '50');
+        params.append('page', page);
+        params.append('limit', limit || elements.perPage.value);
 
         if (elements.search.value.trim()) {
             params.append('search', elements.search.value.trim());
         }
 
-        params.append('sortBy', elements.sortBy.value);
-        params.append('sortOrder', elements.sortOrder.value);
+        params.append('sortBy', currentSort.column);
+        params.append('sortOrder', currentSort.direction);
 
         return params;
     }
@@ -1786,7 +1932,8 @@
                 renderMediaTable(filteredData);
                 updatePagination(result.pagination, filteredData.length);
                 updateStats(filteredData);
-                updateSelectionUI();
+                updateSelectionUI(); // This will maintain selections across pages
+                updateSortIndicators();
 
                 elements.loading.style.display = 'none';
                 elements.tableWrapper.style.display = 'block';
@@ -1848,6 +1995,7 @@
             `;
         }
 
+        // Update selection UI after rendering - this maintains state across pages
         updateSelectionUI();
     }
 
@@ -1878,7 +2026,7 @@
     }
 
     function updatePagination(pagination, filteredCount) {
-        const itemsPerPage = 50;
+        const itemsPerPage = parseInt(elements.perPage.value);
         const startItem = (pagination.currentPage - 1) * itemsPerPage + 1;
         const endItem = Math.min(pagination.currentPage * itemsPerPage, filteredCount || pagination.totalItems);
 
@@ -1910,7 +2058,7 @@
         const page = parseInt(pageNum);
         if (page >= 1 && page <= totalPages && page !== currentPage) {
             currentPage = page;
-            loadData();
+            loadData(); // Selections persist across page changes
         }
     }
 
@@ -1922,28 +2070,29 @@
             searchTimeout = setTimeout(() => {
                 currentPage = 1;
                 selectedRows.clear(); // Clear selections when search changes
+                allFilteredData = [];
                 loadData();
             }, 500);
         });
 
-        [elements.sortBy, elements.sortOrder].forEach(select => {
-            select.addEventListener('change', () => {
-                currentPage = 1;
-                loadData();
-            });
+        elements.perPage.addEventListener('change', () => {
+            currentPage = 1;
+            // Don't clear selections when changing page size
+            allFilteredData = [];
+            loadData();
         });
 
         elements.prevBtn.addEventListener('click', () => {
             if (currentPage > 1) {
                 currentPage--;
-                loadData();
+                loadData(); // Selections persist
             }
         });
 
         elements.nextBtn.addEventListener('click', () => {
             if (currentPage < totalPages) {
                 currentPage++;
-                loadData();
+                loadData(); // Selections persist
             }
         });
 
@@ -1965,10 +2114,12 @@
     // Initialize dashboard
     async function initialize() {
         initializeColumnResizing();
+        initializeColumnSorting();
         initializeMultiSelect();
         initializeSelection();
         setupEventListeners();
         updateActiveFiltersDisplay();
+        updateSortIndicators();
         await loadFilters();
         await loadData();
     }
