@@ -251,6 +251,111 @@
             font-size: 0.85rem;
         }
 
+        /* Column Width Controls */
+        .column-controls {
+            background: var(--surface-2);
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .column-controls h3 {
+            margin: 0 0 1.5rem 0;
+            font-size: 1.1rem;
+            color: var(--text);
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .column-sliders {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+
+        .column-slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .column-slider-label {
+            font-size: 0.85rem;
+            color: var(--text);
+            font-weight: 500;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .column-width-value {
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+
+        .column-slider {
+            width: 100%;
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .column-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--primary);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(96, 165, 250, 0.3);
+            transition: all 0.2s ease;
+        }
+
+        .column-slider::-webkit-slider-thumb:hover {
+            background: var(--primary-hover);
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(96, 165, 250, 0.5);
+        }
+
+        .column-slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: var(--primary);
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 6px rgba(96, 165, 250, 0.3);
+            transition: all 0.2s ease;
+        }
+
+        .column-slider::-moz-range-thumb:hover {
+            background: var(--primary-hover);
+            transform: scale(1.1);
+        }
+
+        .column-reset-btn {
+            background: var(--warning);
+            color: var(--text-dark);
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            margin-top: 1rem;
+        }
+
+        .column-reset-btn:hover {
+            background: color-mix(in oklab, var(--warning), #000 10%);
+        }
+
         /* Active Filters */
         .active-filters-section {
             margin-bottom: 1.5rem;
@@ -380,6 +485,8 @@
             overflow-x: auto;
             overflow-y: auto;
             max-height: 70vh;
+            position: relative;
+            scroll-behavior: smooth;
         }
 
         .media-table {
@@ -389,6 +496,7 @@
             min-width: 1600px;
         }
 
+        /* Resizable column headers */
         .media-table th {
             background: var(--surface-2);
             padding: 1rem 0.75rem;
@@ -396,17 +504,48 @@
             font-weight: 700;
             color: var(--text);
             border-bottom: 2px solid var(--border);
+            border-right: 2px solid var(--border-light);
             font-size: 0.85rem;
             letter-spacing: 0.3px;
             position: sticky;
             top: 0;
             z-index: 10;
             user-select: none;
+            position: relative;
+        }
+
+        .media-table th:last-child {
+            border-right: none;
+        }
+
+        .media-table th.resizable::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 8px;
+            background: transparent;
+            cursor: col-resize;
+            user-select: none;
+            z-index: 20;
+        }
+
+        .media-table th.resizable:hover::after {
+            background: linear-gradient(90deg, transparent, var(--primary) 50%, transparent);
+            opacity: 0.6;
+        }
+
+        .media-table th.resizing::after {
+            background: var(--primary);
+            opacity: 0.8;
+            width: 4px;
         }
 
         .media-table td {
             padding: 0.75rem;
             border-bottom: 1px solid var(--border);
+            border-right: 1px solid var(--border-light);
             color: var(--text);
             vertical-align: top;
             font-size: 0.85rem;
@@ -415,11 +554,15 @@
             white-space: nowrap;
         }
 
+        .media-table td:last-child {
+            border-right: none;
+        }
+
         .media-table tr:hover {
             background: color-mix(in oklab, var(--surface), var(--primary) 4%);
         }
 
-        /* Column widths */
+        /* Column widths - dynamic */
         .col-title { width: 280px; }
         .col-series { width: 220px; }
         .col-season-episode { width: 80px; }
@@ -430,6 +573,20 @@
         .col-cmaf { width: 100px; }
         .col-updated { width: 160px; }
         .col-guid { width: 200px; }
+
+        /* Resize indicator line */
+        .resize-line {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--primary);
+            opacity: 0.8;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 0 4px rgba(96, 165, 250, 0.5);
+        }
 
         .feature-tags {
             display: flex;
@@ -516,35 +673,146 @@
             color: white;
         }
 
-        /* Pagination */
-        .pagination {
+        /* GUID Deep Link Styles */
+        .guid-container {
             display: flex;
-            justify-content: center;
             align-items: center;
-            gap: 1rem;
-            padding: 1.5rem;
-            background: var(--surface-2);
+            gap: 0.5rem;
         }
 
-        .pagination button {
+        .guid-link {
+            color: var(--primary);
+            text-decoration: none;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        .guid-link:hover {
+            color: var(--primary-hover);
+            text-decoration: underline;
+        }
+
+        .guid-link:visited {
+            color: color-mix(in oklab, var(--primary), var(--text-muted) 30%);
+        }
+
+        .copy-guid-btn {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .copy-guid-btn:hover {
+            background: var(--surface-2);
+            color: var(--text);
+            border-color: var(--primary);
+        }
+
+        .copy-guid-btn.copied {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .guid-text {
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        /* Enhanced Pagination */
+        .pagination {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            background: var(--surface-2);
+            border-top: 1px solid var(--border);
+        }
+
+        .pagination-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .pagination-main {
+            font-weight: 600;
+            color: var(--text);
+            font-size: 0.9rem;
+        }
+
+        .pagination-details {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .pagination-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .pagination-controls button {
             background: var(--primary);
             color: white;
             border: none;
-            padding: 0.5rem 1rem;
+            padding: 0.6rem 1.2rem;
             border-radius: 6px;
             cursor: pointer;
             font-weight: 600;
-            transition: background 0.2s ease;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+            min-width: 100px;
         }
 
-        .pagination button:hover:not(:disabled) {
+        .pagination-controls button:hover:not(:disabled) {
             background: var(--primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3);
         }
 
-        .pagination button:disabled {
+        .pagination-controls button:disabled {
             background: #6b7280;
             cursor: not-allowed;
             opacity: 0.7;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .page-jump {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .page-jump input {
+            width: 60px;
+            padding: 0.4rem;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text);
+            border-radius: 4px;
+            text-align: center;
+            font-size: 0.85rem;
+        }
+
+        .page-jump input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2);
         }
 
         .loading {
@@ -564,13 +832,28 @@
 
         @media (max-width: 768px) {
             .controls-grid,
-            .filters-grid {
+            .filters-grid,
+            .column-sliders {
                 grid-template-columns: 1fr;
             }
 
             .stats-bar {
                 flex-direction: column;
                 gap: 1rem;
+            }
+
+            .pagination {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .pagination-controls {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .pagination-controls button {
+                width: 100%;
             }
         }
     </style>
@@ -603,6 +886,106 @@
                     <option value="ASC">Ascending</option>
                     <option value="DESC">Descending</option>
                 </select>
+            </div>
+        </div>
+
+        <!-- Column Width Controls -->
+        <div class="column-controls">
+            <h3>📏 Column Width Controls</h3>
+            <div class="column-sliders">
+                <div class="column-slider-group">
+                    <div class="column-slider-label">
+                        <span>📝 Title</span>
+                        <span class="column-width-value" id="title-width-value">280px</span>
+                    </div>
+                    <input type="range" class="column-slider" id="title-slider"
+                           min="120" max="400" value="280" data-column="title">
+                </div>
+
+                <div class="column-slider-group">
+                    <div class="column-slider-label">
+                        <span>📺 Series</span>
+                        <span class="column-width-value" id="series-width-value">220px</span>
+                    </div>
+                    <input type="range" class="column-slider" id="series-slider"
+                           min="100" max="350" value="220" data-column="series">
+                </div>
+
+                <div class="column-slider-group">
+                    <div class="column-slider-label">
+                        <span>🔢 S/E</span>
+                        <span class="column-width-value" id="season-episode-width-value">80px</span>
+                    </div>
+                    <input type="range" class="column-slider" id="season-episode-slider"
+                           min="60" max="120" value="80" data-column="season-episode">
+                </div>
+
+                <div class="column-slider-group">
+                    <div class="column-slider-label">
+                        <span>🎭 Type</span>
+                        <span class="column-width-value" id="type-width-value">120px</span>
+                    </div>
+                    <input type="range" class="column-slider" id="type-slider"
+                           min="80" max="180" value="120" data-column="type">
+                </div>
+
+                <div class="column-slider-group">
+                    <div class="column-slider-label">
+                        <span>📡 Availability</span>
+                        <span class="column-width-value" id="availability-width-value">140px</span>
+                    </div>
+                    <input type="range" class="column-slider" id="availability-slider"
+                           min="100" max="200" value="140" data-column="availability">
+                </div>
+
+                <div class="column-slider-group">
+                    <div class="column-slider-label">
+                        <span>⭐ Features</span>
+                        <span class="column-width-value" id="features-width-value">180px</span>
+                    </div>
+                    <input type="range" class="column-slider" id="features-slider"
+                           min="120" max="300" value="180" data-column="features">
+                </div>
+
+                <div class="column-slider-group">
+                    <div class="column-slider-label">
+                        <span>🎥 Streaming</span>
+                        <span class="column-width-value" id="streaming-properties-width-value">180px</span>
+                    </div>
+                    <input type="range" class="column-slider" id="streaming-properties-slider"
+                           min="120" max="300" value="180" data-column="streaming-properties">
+                </div>
+
+                <div class="column-slider-group">
+                    <div class="column-slider-label">
+                        <span>📦 CMAF</span>
+                        <span class="column-width-value" id="cmaf-width-value">100px</span>
+                    </div>
+                    <input type="range" class="column-slider" id="cmaf-slider"
+                           min="80" max="150" value="100" data-column="cmaf">
+                </div>
+
+                <div class="column-slider-group">
+                    <div class="column-slider-label">
+                        <span>📅 Updated</span>
+                        <span class="column-width-value" id="updated-width-value">160px</span>
+                    </div>
+                    <input type="range" class="column-slider" id="updated-slider"
+                           min="120" max="220" value="160" data-column="updated">
+                </div>
+
+                <div class="column-slider-group">
+                    <div class="column-slider-label">
+                        <span>🔗 GUID</span>
+                        <span class="column-width-value" id="guid-width-value">200px</span>
+                    </div>
+                    <input type="range" class="column-slider" id="guid-slider"
+                           min="150" max="300" value="200" data-column="guid">
+                </div>
+            </div>
+
+            <div style="text-align: center;">
+                <button class="column-reset-btn" id="reset-columns">🔄 Reset to Default</button>
             </div>
         </div>
 
@@ -747,16 +1130,16 @@
             <table class="media-table" id="media-table">
                 <thead>
                 <tr>
-                    <th class="col-title">Title</th>
-                    <th class="col-series">Series</th>
-                    <th class="col-season-episode">S/E</th>
-                    <th class="col-type">Type</th>
-                    <th class="col-availability">Availability</th>
-                    <th class="col-features">Features</th>
-                    <th class="col-streaming-properties">Streaming Properties</th>
-                    <th class="col-cmaf">CMAF</th>
-                    <th class="col-updated">Updated</th>
-                    <th class="col-guid">GUID</th>
+                    <th class="col-title resizable" data-column="title">Title</th>
+                    <th class="col-series resizable" data-column="series">Series</th>
+                    <th class="col-season-episode resizable" data-column="season-episode">S/E</th>
+                    <th class="col-type resizable" data-column="type">Type</th>
+                    <th class="col-availability resizable" data-column="availability">Availability</th>
+                    <th class="col-features resizable" data-column="features">Features</th>
+                    <th class="col-streaming-properties resizable" data-column="streaming-properties">Streaming Properties</th>
+                    <th class="col-cmaf resizable" data-column="cmaf">CMAF</th>
+                    <th class="col-updated resizable" data-column="updated">Updated</th>
+                    <th class="col-guid" data-column="guid">GUID</th>
                 </tr>
                 </thead>
                 <tbody id="media-tbody">
@@ -765,12 +1148,24 @@
         </div>
 
         <div class="pagination" id="pagination" style="display: none;">
-            <button id="prev-btn">Previous</button>
-            <span id="page-info">Page 1 of 1</span>
-            <button id="next-btn">Next</button>
+            <div class="pagination-info">
+                <div class="pagination-main" id="pagination-main">Page 1 of 1</div>
+                <div class="pagination-details" id="pagination-details">Showing 0 to 0 of 0 entries</div>
+            </div>
+
+            <div class="pagination-controls">
+                <button id="prev-btn">« Previous</button>
+                <div class="page-jump">
+                    <span>Go to:</span>
+                    <input type="number" id="page-jump" min="1" placeholder="1">
+                </div>
+                <button id="next-btn">Next »</button>
+            </div>
         </div>
     </div>
 </div>
+
+<div class="resize-line" id="resize-line"></div>
 
 <script>
     const API_BASE = 'http://localhost:3001/api';
@@ -782,6 +1177,12 @@
     let currentData = [];
     let allStats = {};
 
+    // Column resizing variables
+    let isResizing = false;
+    let currentColumn = null;
+    let startX = 0;
+    let startWidth = 0;
+
     // Active filters store
     const activeFilters = {
         series: new Set(),
@@ -792,6 +1193,20 @@
         cmaf: new Set(),
         season: new Set(),
         episode: new Set()
+    };
+
+    // Column width defaults
+    const defaultColumnWidths = {
+        'title': 280,
+        'series': 220,
+        'season-episode': 80,
+        'type': 120,
+        'availability': 140,
+        'features': 180,
+        'streaming-properties': 180,
+        'cmaf': 100,
+        'updated': 160,
+        'guid': 200
     };
 
     // Filter configurations
@@ -853,15 +1268,187 @@
         sortOrder: document.getElementById('sort-order'),
         prevBtn: document.getElementById('prev-btn'),
         nextBtn: document.getElementById('next-btn'),
-        pageInfo: document.getElementById('page-info'),
+        paginationMain: document.getElementById('pagination-main'),
+        paginationDetails: document.getElementById('pagination-details'),
+        pageJump: document.getElementById('page-jump'),
         totalItemsSpan: document.getElementById('total-items'),
         filteredItems: document.getElementById('filtered-items'),
         totalSeries: document.getElementById('total-series'),
         cmafCount: document.getElementById('cmaf-count'),
         encodedCount: document.getElementById('encoded-count'),
         activeFilters: document.getElementById('active-filters'),
-        clearAllFilters: document.getElementById('clear-all-filters')
+        clearAllFilters: document.getElementById('clear-all-filters'),
+        resetColumns: document.getElementById('reset-columns'),
+        resizeLine: document.getElementById('resize-line')
     };
+
+    // Initialize column header resizing
+    function initializeColumnResizing() {
+        const headers = document.querySelectorAll('.media-table th.resizable');
+
+        headers.forEach(header => {
+            header.addEventListener('mousedown', handleMouseDown);
+        });
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    function handleMouseDown(e) {
+        const rect = e.target.getBoundingClientRect();
+        const isRightEdge = e.clientX >= rect.right - 8;
+
+        if (isRightEdge) {
+            e.preventDefault();
+            isResizing = true;
+            currentColumn = e.target;
+            startX = e.clientX;
+            startWidth = parseInt(window.getComputedStyle(currentColumn).width, 10);
+            currentColumn.classList.add('resizing');
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+            elements.resizeLine.style.display = 'block';
+            elements.resizeLine.style.left = e.clientX + 'px';
+        }
+    }
+
+    function handleMouseMove(e) {
+        if (!isResizing) {
+            const target = e.target;
+            if (target.classList.contains('resizable')) {
+                const rect = target.getBoundingClientRect();
+                const isRightEdge = e.clientX >= rect.right - 8;
+                target.style.cursor = isRightEdge ? 'col-resize' : 'default';
+            }
+            return;
+        }
+
+        const width = startWidth + (e.clientX - startX);
+        const minWidth = 60;
+        const maxWidth = 500;
+        const clampedWidth = Math.max(minWidth, Math.min(maxWidth, width));
+
+        if (clampedWidth >= minWidth) {
+            currentColumn.style.width = clampedWidth + 'px';
+            elements.resizeLine.style.left = e.clientX + 'px';
+
+            // Update corresponding slider and value display
+            const columnName = currentColumn.getAttribute('data-column');
+            const slider = document.getElementById(`${columnName}-slider`);
+            const valueElement = document.getElementById(`${columnName}-width-value`);
+
+            if (slider) {
+                slider.value = clampedWidth;
+            }
+            if (valueElement) {
+                valueElement.textContent = `${clampedWidth}px`;
+            }
+
+            // Update all elements with the same column class
+            updateColumnWidth(columnName, clampedWidth);
+        }
+    }
+
+    function handleMouseUp() {
+        if (isResizing) {
+            isResizing = false;
+            currentColumn.classList.remove('resizing');
+            currentColumn = null;
+            document.body.style.cursor = 'default';
+            document.body.style.userSelect = 'auto';
+            elements.resizeLine.style.display = 'none';
+        }
+    }
+
+    // Initialize column width controls
+    function initializeColumnControls() {
+        const sliders = document.querySelectorAll('.column-slider');
+
+        sliders.forEach(slider => {
+            const columnName = slider.getAttribute('data-column');
+            const valueElement = document.getElementById(`${columnName}-width-value`);
+
+            slider.addEventListener('input', (e) => {
+                const width = parseInt(e.target.value);
+                updateColumnWidth(columnName, width);
+                if (valueElement) {
+                    valueElement.textContent = `${width}px`;
+                }
+            });
+        });
+
+        // Reset button
+        elements.resetColumns.addEventListener('click', resetColumnWidths);
+    }
+
+    function updateColumnWidth(columnName, width) {
+        const className = `.col-${columnName}`;
+        const elements = document.querySelectorAll(className);
+
+        elements.forEach(element => {
+            element.style.width = `${width}px`;
+        });
+    }
+
+    function resetColumnWidths() {
+        Object.keys(defaultColumnWidths).forEach(columnName => {
+            const width = defaultColumnWidths[columnName];
+            const slider = document.getElementById(`${columnName}-slider`);
+            const valueElement = document.getElementById(`${columnName}-width-value`);
+
+            if (slider) {
+                slider.value = width;
+            }
+            if (valueElement) {
+                valueElement.textContent = `${width}px`;
+            }
+
+            updateColumnWidth(columnName, width);
+        });
+    }
+
+    // Deep linking functionality
+    function createVideoRobotDeeplink(guid) {
+        if (!guid || guid === 'N/A') return null;
+        return `https://videorobot-ent.paramountplus.com/jobs/show_jobs?limit=25&offset=0&order_by=desc&sort_by=id&bu=all&show_qc=true&ref_id=${guid}`;
+    }
+
+    // Render GUID with deeplink
+    function renderGUIDWithLink(guid) {
+        if (!guid || guid === 'N/A') {
+            return `<span class="guid-text">${guid}</span>`;
+        }
+
+        const deeplink = createVideoRobotDeeplink(guid);
+        const displayGuid = guid.length > 18 ? guid.substring(0, 15) + '...' : guid;
+
+        return `
+            <div class="guid-container">
+                <a href="${deeplink}" target="_blank" class="guid-link" title="Open in Video Robot (${guid})">
+                    ${displayGuid}
+                </a>
+                <button class="copy-guid-btn" onclick="copyToClipboard('${guid}', this)" title="Copy GUID">
+                    📋
+                </button>
+            </div>
+        `;
+    }
+
+    // Copy to clipboard functionality
+    function copyToClipboard(text, buttonElement) {
+        navigator.clipboard.writeText(text).then(() => {
+            const originalText = buttonElement.textContent;
+            buttonElement.textContent = '✓';
+            buttonElement.classList.add('copied');
+
+            setTimeout(() => {
+                buttonElement.textContent = originalText;
+                buttonElement.classList.remove('copied');
+            }, 1500);
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+        });
+    }
 
     // Helper function to determine CMAF status
     function getCMAFStatus(item) {
@@ -1220,7 +1807,7 @@
                 const filteredData = applyFilters(result.data);
 
                 renderMediaTable(filteredData);
-                updatePagination(result.pagination);
+                updatePagination(result.pagination, filteredData.length);
                 updateStats(filteredData);
 
                 elements.loading.style.display = 'none';
@@ -1260,7 +1847,7 @@
                     <td class="col-streaming-properties">${renderStreamingPropertyTags(item.streaming_properties)}</td>
                     <td class="col-cmaf">${renderCMAFIndicator(cmafStatus)}</td>
                     <td class="col-updated">${formatDate(item.updated_timestamp)}</td>
-                    <td class="col-guid" title="${guid}">${guid.length > 20 ? guid.substring(0, 17) + '...' : guid}</td>
+                    <td class="col-guid">${renderGUIDWithLink(guid)}</td>
                 </tr>
             `;
         }).join('');
@@ -1316,10 +1903,20 @@
         return `<span class="availability-badge ${className}">${state}</span>`;
     }
 
-    function updatePagination(pagination) {
-        elements.pageInfo.textContent = `Page ${pagination.currentPage} of ${pagination.totalPages}`;
+    function updatePagination(pagination, filteredCount) {
+        const itemsPerPage = 50;
+        const startItem = (pagination.currentPage - 1) * itemsPerPage + 1;
+        const endItem = Math.min(pagination.currentPage * itemsPerPage, filteredCount || pagination.total);
+
+        elements.paginationMain.textContent = `Page ${pagination.currentPage} of ${pagination.totalPages}`;
+        elements.paginationDetails.textContent = `Showing ${startItem.toLocaleString()} to ${endItem.toLocaleString()} of ${(filteredCount || pagination.total).toLocaleString()} entries`;
+
         elements.prevBtn.disabled = !pagination.hasPrev;
         elements.nextBtn.disabled = !pagination.hasNext;
+
+        // Update page jump input
+        elements.pageJump.max = pagination.totalPages;
+        elements.pageJump.placeholder = pagination.currentPage.toString();
     }
 
     function updateStats(filteredData) {
@@ -1334,6 +1931,15 @@
                 f.feature && f.feature.toLowerCase().includes('encode')
             );
             elements.encodedCount.textContent = encodedFeature ? encodedFeature.count.toLocaleString() : '0';
+        }
+    }
+
+    // Page jump functionality
+    function jumpToPage(pageNum) {
+        const page = parseInt(pageNum);
+        if (page >= 1 && page <= totalPages && page !== currentPage) {
+            currentPage = page;
+            loadData();
         }
     }
 
@@ -1368,16 +1974,36 @@
                 loadData();
             }
         });
+
+        // Page jump functionality
+        elements.pageJump.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                jumpToPage(e.target.value);
+                e.target.value = '';
+            }
+        });
+
+        elements.pageJump.addEventListener('blur', (e) => {
+            if (e.target.value) {
+                jumpToPage(e.target.value);
+                e.target.value = '';
+            }
+        });
     }
 
     // Initialize dashboard
     async function initialize() {
+        initializeColumnControls();
+        initializeColumnResizing();
         initializeMultiSelect();
         setupEventListeners();
         updateActiveFiltersDisplay();
         await loadFilters();
         await loadData();
     }
+
+    // Make copyToClipboard globally available for onclick handlers
+    window.copyToClipboard = copyToClipboard;
 
     // Start the dashboard
     initialize();
