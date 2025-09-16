@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Vault Dashboard</title>
+    <style>
+        /* Design tokens matching App.css */
+        :root {
+            --bg: #0f172a;
+            --surface: #111827;
+            --surface-2: #0b1220;
+            --text: #ffffff;
+            --text-muted: rgba(255,255,255,0.75);
+            --border: #1f2937;
+            --primary: #60a5fa;
+            --primary-hover: #3b82f6;
+            --accent: #34d399;
+            --accent-hover: #10b981;
+            --danger: #f87171;
+            --danger-hover: #ef4444;
+            --warning: #fbbf24;
+            --shadow: 0 10px 30px rgba(0,0,0,0.35);
+            --radius: 12px;
+            --focus: 0 0 0 3px rgba(96,165,250,0.35);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            background: radial-gradient(1200px 600px at 10% -10%, rgba(59,130,246,0.10), rgba(0,0,0,0) 40%),
+            radial-gradient(900px 600px at 110% 10%, rgba(16,185,129,0.10), rgba(0,0,0,0) 35%),
+            var(--bg);
+            color: var(--text);
+            font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+            min-height: 100vh;
+            padding: 2rem 1.25rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: clamp(1.6rem, 2.4vw, 2.25rem);
+            font-weight: 800;
+            letter-spacing: 0.2px;
+            color: var(--text);
+            text-shadow: 0 1px 0 rgba(0,0,0,0.15);
+            margin-bottom: 2rem;
+        }
+
+        .dashboard-controls {
+            background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02)), var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow);
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .control-group label {
+            font-weight: 600;
+            color: var(--text);
+            font-size: 0.9rem;
+        }
+
+        .control-group input,
+        .control-group select {
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            background: var(--surface-2);
+            color: var(--text);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: border-color 0.2s ease, background 0.2s ease;
+        }
+
+        .control-group input:focus,
+        .control-group select:focus {
+            outline: none;
+            box-shadow: var(--focus);
+            border-color: var(--primary);
+            background: color-mix(in oklab, var(--surface-2), var(--primary) 6%);
+        }
+
+        .toggle-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: center;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .toggle-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .toggle {
+            position: relative;
+            width: 48px;
+            height: 24px;
+            background: #374151;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .toggle.active {
+            background: var(--primary);
+        }
+
+        .toggle::before {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.2s ease;
+        }
+
+        .toggle.active::before {
+            transform: translateX(24px);
+        }
+
+        .date-picker {
+            position: relative;
+        }
+
+        .date-picker input {
+            width: 100%;
+        }
+
+        .stats-bar {
+            background: var(--surface-2);
+            padding: 1rem;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .media-table-container {
+            background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02)), var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        .media-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .media-table th {
+            background: var(--surface-2);
+            padding: 1rem 0.75rem;
+            text-align: left;
+            font-weight: 700;
+            color: var(--text);
+            border-bottom: 2px solid var(--border);
+            font-size: 0.85rem;
+            letter-spacing: 0.3px;
+        }
+
+        .media-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text);
+            vertical-align: top;
+            font-size: 0.85rem;
+        }
+
+        .media-table tr:hover {
+            background: color-mix(in oklab, var(--surface), var(--primary) 4%);
+        }
+
+        .media-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .feature-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+        }
+
+        .feature-tag {
+            background: var(--primary);
+            color: white;
+            padding: 0.15rem 0.4rem;
+            border-radius: 999px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.1px;
+        }
+
+        .content-type-badge {
+            background: var(--accent);
+            color: white;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .availability-badge {
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .availability-badge.available {
+            background: var(--accent);
+            color: white;
+        }
+
+        .availability-badge.unavailable {
+            background: var(--danger);
+            color: white;
+        }
+
+        .availability-badge.unknown {
+            background: #6b7280;
+            color: white;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.5rem;
+            background: var(--surface-2);
+        }
+
+        .pagination button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s ease;
+        }
+
+        .pagination button:hover:not(:disabled) {
+            background: var(--primary-hover);
+        }
+
+        .pagination button:disabled {
+            background: #6b7280;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+        }
+
+        .error {
+            background: #7f1d1d;
+            border: 1px solid var(--danger);
+            color: var(--text);
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
+        .truncate {
+            max-width: 200px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .date-display {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        @media (max-width: 768px) {
+            .controls-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .media-table-container {
+                overflow-x: auto;
+            }
+
+            .media-table {
+                min-width: 800px;
+            }
+
+            .toggle-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .toggle-group {
+                justify-content: space-between;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🎬 Media Vault Dashboard</h1>
+
+    <div class="dashboard-controls">
+        <div class="controls-grid">
+            <div class="control-group">
+                <label for="search">Search</label>
+                <input type="text" id="search" placeholder="Search titles...">
+            </div>
+
+            <div class="control-group">
+                <label for="series-filter">Series</label>
+                <input type="text" id="series-filter" placeholder="Filter by series...">
+            </div>
+
+            <div class="control-group">
+                <label for="content-type">Content Type</label>
+                <select id="content-type">
+                    <option value="">All Types</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="availability">Availability</label>
+                <select id="availability">
+                    <option value="">All Availability</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="sort-by">Sort By</label>
+                <select id="sort-by">
+                    <option value="title">Title</option>
+                    <option value="series_title">Series</option>
+                    <option value="season_number">Season</option>
+                    <option value="episode_number">Episode</option>
+                    <option value="created_at">Date Added</option>
+                    <option value="updated_timestamp">Last Updated</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="sort-order">Order</label>
+                <select id="sort-order">
+                    <option value="ASC">Ascending</option>
+                    <option value="DESC">Descending</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="toggle-controls">
+            <div class="toggle-group">
+                <label>Show Encoded Items Only</label>
+                <div class="toggle" id="encoded-toggle"></div>
+            </div>
+
+            <div class="toggle-group">
+                <label>Show Repackaged Items Only</label>
+                <div class="toggle" id="repackaged-toggle"></div>
+            </div>
+
+            <div class="date-picker">
+                <label>Encoded After:</label>
+                <input type="datetime-local" id="encoded-after">
+            </div>
+
+            <div class="date-picker">
+                <label>Repackaged After:</label>
+                <input type="datetime-local" id="repackaged-after">
+            </div>
+        </div>
+    </div>
+
+    <div class="stats-bar">
+        <div class="stat-item">
+            <span class="stat-number" id="total-items">0</span>
+            <span class="stat-label">Total Items</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-number" id="filtered-items">0</span>
+            <span class="stat-label">Filtered Results</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-number" id="total-series">0</span>
+            <span class="stat-label">Series</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-number" id="encoded-count">0</span>
+            <span class="stat-label">Encoded</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-number" id="repackaged-count">0</span>
+            <span class="stat-label">Repackaged</span>
+        </div>
+    </div>
+
+    <div class="media-table-container">
+        <div class="loading" id="loading">Loading media data...</div>
+        <div class="error" id="error" style="display: none;"></div>
+
+        <table class="media-table" id="media-table" style="display: none;">
+            <thead>
+            <tr>
+                <th>Title</th>
+                <th>Series</th>
+                <th>S/E</th>
+                <th>Type</th>
+                <th>Availability</th>
+                <th>Features</th>
+                <th>Updated</th>
+                <th>Added</th>
+                <th>GUID</th>
+            </tr>
+            </thead>
+            <tbody id="media-tbody">
+            </tbody>
+        </table>
+
+        <div class="pagination" id="pagination" style="display: none;">
+            <button id="prev-btn">Previous</button>
+            <span id="page-info">Page 1 of 1</span>
+            <button id="next-btn">Next</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_BASE = 'http://localhost:3001/api';
+
+    let currentPage = 1;
+    let totalPages = 1;
+    let isLoading = false;
+    let allStats = {};
+
+    // DOM Elements
+    const elements = {
+        loading: document.getElementById('loading'),
+        error: document.getElementById('error'),
+        mediaTable: document.getElementById('media-table'),
+        mediaTbody: document.getElementById('media-tbody'),
+        pagination: document.getElementById('pagination'),
+        search: document.getElementById('search'),
+        seriesFilter: document.getElementById('series-filter'),
+        contentType: document.getElementById('content-type'),
+        availability: document.getElementById('availability'),
+        sortBy: document.getElementById('sort-by'),
+        sortOrder: document.getElementById('sort-order'),
+        encodedToggle: document.getElementById('encoded-toggle'),
+        repackagedToggle: document.getElementById('repackaged-toggle'),
+        encodedAfter: document.getElementById('encoded-after'),
+        repackagedAfter: document.getElementById('repackaged-after'),
+        prevBtn: document.getElementById('prev-btn'),
+        nextBtn: document.getElementById('next-btn'),
+        pageInfo: document.getElementById('page-info'),
+        totalItems: document.getElementById('total-items'),
+        filteredItems: document.getElementById('filtered-items'),
+        totalSeries: document.getElementById('total-series'),
+        encodedCount: document.getElementById('encoded-count'),
+        repackagedCount: document.getElementById('repackaged-count')
+    };
+
+    // Toggle functionality
+    function initializeToggles() {
+        [elements.encodedToggle, elements.repackagedToggle].forEach(toggle => {
+            toggle.addEventListener('click', () => {
+                toggle.classList.toggle('active');
+                loadData();
+            });
+        });
+    }
+
+    // Date formatting
+    function formatDate(timestamp) {
+        if (!timestamp) return 'N/A';
+        const date = new Date(parseInt(timestamp));
+        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    }
+
+    // Feature tags rendering
+    function renderFeatureTags(features) {
+        if (!features || features.length === 0) return '';
+        return `<div class="feature-tags">${features.map(feature =>
+            `<span class="feature-tag">${feature}</span>`
+        ).join('')}</div>`;
+    }
+
+    // Content type badge
+    function renderContentTypeBadge(type) {
+        if (!type) return '';
+        return `<span class="content-type-badge">${type}</span>`;
+    }
+
+    // Availability badge
+    function renderAvailabilityBadge(state) {
+        if (!state) return `<span class="availability-badge unknown">Unknown</span>`;
+        const className = state.toLowerCase().includes('available') ? 'available' :
+            state.toLowerCase().includes('unavailable') ? 'unavailable' : 'unknown';
+        return `<span class="availability-badge ${className}">${state}</span>`;
+    }
+
+    // Load and populate filter dropdowns
+    async function loadFilters() {
+        try {
+            const response = await fetch(`${API_BASE}/stats`);
+            const result = await response.json();
+
+            if (result.success) {
+                allStats = result.data;
+
+                // Populate content types
+                elements.contentType.innerHTML = '<option value="">All Types</option>' +
+                    result.data.contentTypes.map(ct =>
+                        `<option value="${ct.content_type}">${ct.content_type} (${ct.count})</option>`
+                    ).join('');
+
+                // Populate availability states
+                elements.availability.innerHTML = '<option value="">All Availability</option>' +
+                    result.data.availabilityStates.map(as =>
+                        `<option value="${as.availability_state}">${as.availability_state} (${as.count})</option>`
+                    ).join('');
+
+                // Update stats
+                elements.totalItems.textContent = result.data.totalItems.toLocaleString();
+                elements.totalSeries.textContent = result.data.totalSeries.toLocaleString();
+            }
+        } catch (error) {
+            console.error('Error loading filters:', error);
+        }
+    }
+
+    // Build query parameters
+    function buildQueryParams() {
+        const params = new URLSearchParams();
+        params.append('page', currentPage);
+        params.append('limit', '50');
+
+        if (elements.search.value.trim()) {
+            params.append('search', elements.search.value.trim());
+        }
+
+        if (elements.seriesFilter.value.trim()) {
+            params.append('series', elements.seriesFilter.value.trim());
+        }
+
+        if (elements.contentType.value) {
+            params.append('contentType', elements.contentType.value);
+        }
+
+        if (elements.availability.value) {
+            params.append('availability', elements.availability.value);
+        }
+
+        params.append('sortBy', elements.sortBy.value);
+        params.append('sortOrder', elements.sortOrder.value);
+
+        return params;
+    }
+
+    // Load media data
+    async function loadData() {
+        if (isLoading) return;
+
+        isLoading = true;
+        elements.loading.style.display = 'block';
+        elements.error.style.display = 'none';
+        elements.mediaTable.style.display = 'none';
+        elements.pagination.style.display = 'none';
+
+        try {
+            const params = buildQueryParams();
+            const response = await fetch(`${API_BASE}/items?${params}`);
+            const result = await response.json();
+
+            if (result.success) {
+                totalPages = result.pagination.totalPages;
+                currentPage = result.pagination.currentPage;
+
+                renderMediaTable(result.data);
+                updatePagination(result.pagination);
+                updateStats(result.pagination.totalItems);
+
+                elements.loading.style.display = 'none';
+                elements.mediaTable.style.display = 'table';
+                elements.pagination.style.display = 'flex';
+            } else {
+                throw new Error(result.error || 'Failed to load data');
+            }
+        } catch (error) {
+            elements.loading.style.display = 'none';
+            elements.error.style.display = 'block';
+            elements.error.textContent = 'Error loading data: ' + error.message;
+        }
+
+        isLoading = false;
+    }
+
+    // Render media table
+    function renderMediaTable(data) {
+        const encodedOnly = elements.encodedToggle.classList.contains('active');
+        const repackagedOnly = elements.repackagedToggle.classList.contains('active');
+        const encodedAfter = elements.encodedAfter.value ? new Date(elements.encodedAfter.value).getTime() : null;
+        const repackagedAfter = elements.repackagedAfter.value ? new Date(elements.repackagedAfter.value).getTime() : null;
+
+        let filteredData = data;
+
+        // Apply advanced filters
+        if (encodedOnly || repackagedOnly || encodedAfter || repackagedAfter) {
+            filteredData = data.filter(item => {
+                const hasEncoded = item.premium_features && item.premium_features.some(f =>
+                    f.toLowerCase().includes('encode') || f.toLowerCase().includes('encoded')
+                );
+                const hasRepackaged = item.premium_features && item.premium_features.some(f =>
+                    f.toLowerCase().includes('repackage') || f.toLowerCase().includes('repackaged')
+                );
+
+                if (encodedOnly && !hasEncoded) return false;
+                if (repackagedOnly && !hasRepackaged) return false;
+
+                if (encodedAfter && (!item.updated_timestamp || item.updated_timestamp < encodedAfter)) return false;
+                if (repackagedAfter && (!item.added_timestamp || item.added_timestamp < repackagedAfter)) return false;
+
+                return true;
+            });
+        }
+
+        elements.mediaTbody.innerHTML = filteredData.map(item => `
+                <tr>
+                    <td class="truncate" title="${item.title || 'N/A'}">${item.title || 'N/A'}</td>
+                    <td class="truncate" title="${item.series_title || ''}">${item.series_title || ''}</td>
+                    <td>
+                        ${item.season_number ? `S${item.season_number}` : ''}
+                        ${item.episode_number ? `E${item.episode_number}` : ''}
+                    </td>
+                    <td>${renderContentTypeBadge(item.content_type)}</td>
+                    <td>${renderAvailabilityBadge(item.availability_state)}</td>
+                    <td>${renderFeatureTags(item.premium_features)}</td>
+                    <td class="date-display">${formatDate(item.updated_timestamp)}</td>
+                    <td class="date-display">${formatDate(item.added_timestamp)}</td>
+                    <td class="truncate" title="${item.guid || 'N/A'}">${item.guid || 'N/A'}</td>
+                </tr>
+            `).join('');
+
+        if (filteredData.length === 0) {
+            elements.mediaTbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                            No media items found matching the current filters.
+                        </td>
+                    </tr>
+                `;
+        }
+    }
+
+    // Update pagination
+    function updatePagination(pagination) {
+        elements.pageInfo.textContent = `Page ${pagination.currentPage} of ${pagination.totalPages}`;
+        elements.prevBtn.disabled = !pagination.hasPrev;
+        elements.nextBtn.disabled = !pagination.hasNext;
+    }
+
+    // Update stats
+    function updateStats(filteredCount) {
+        elements.filteredItems.textContent = filteredCount.toLocaleString();
+
+        // Calculate encoded/repackaged counts (this would need server-side support for accuracy)
+        if (allStats.premiumFeatures) {
+            const encodedFeature = allStats.premiumFeatures.find(f =>
+                f.feature && f.feature.toLowerCase().includes('encode')
+            );
+            const repackagedFeature = allStats.premiumFeatures.find(f =>
+                f.feature && f.feature.toLowerCase().includes('repackage')
+            );
+
+            elements.encodedCount.textContent = encodedFeature ? encodedFeature.count.toLocaleString() : '0';
+            elements.repackagedCount.textContent = repackagedFeature ? repackagedFeature.count.toLocaleString() : '0';
+        }
+    }
+
+    // Event listeners
+    function setupEventListeners() {
+        // Search and filter inputs
+        [elements.search, elements.seriesFilter].forEach(input => {
+            let timeout;
+            input.addEventListener('input', () => {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => {
+                    currentPage = 1;
+                    loadData();
+                }, 500);
+            });
+        });
+
+        // Select filters
+        [elements.contentType, elements.availability, elements.sortBy, elements.sortOrder].forEach(select => {
+            select.addEventListener('change', () => {
+                currentPage = 1;
+                loadData();
+            });
+        });
+
+        // Date filters
+        [elements.encodedAfter, elements.repackagedAfter].forEach(input => {
+            input.addEventListener('change', () => {
+                currentPage = 1;
+                loadData();
+            });
+        });
+
+        // Pagination
+        elements.prevBtn.addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                loadData();
+            }
+        });
+
+        elements.nextBtn.addEventListener('click', () => {
+            if (currentPage < totalPages) {
+                currentPage++;
+                loadData();
+            }
+        });
+    }
+
+    // Initialize dashboard
+    async function initialize() {
+        initializeToggles();
+        setupEventListeners();
+        await loadFilters();
+        await loadData();
+    }
+
+    // Start the dashboard
+    initialize();
+</script>
+</body>
+</html>

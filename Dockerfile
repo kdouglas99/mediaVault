@@ -29,5 +29,6 @@ COPY --from=build /app/dist ./dist
 # Expose port
 EXPOSE 3000
 
-# Start the application
-CMD ["serve", "-s", "dist", "-l", "3000"]
+# Start the application without -s flag to allow static file serving
+# But we'll create a serve.json config to handle SPA routing for React routes only
+CMD ["serve", "dist", "-l", "3000"]
