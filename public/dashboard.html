@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -704,17 +703,12 @@
 
         <div class="toggle-controls">
             <div class="toggle-group">
-                <label>Show Encoded Items Only</label>
-                <div class="toggle" id="encoded-toggle"></div>
-            </div>
-
-            <div class="toggle-group">
-                <label>Show Repackaged Items Only</label>
+                <label>Show Repackaged Last 7 Days Only</label>
                 <div class="toggle" id="repackaged-toggle"></div>
             </div>
 
             <div class="toggle-group">
-                <label>Show CMAF Encoded Only</label>
+                <label>Show CMAF Only</label>
                 <div class="toggle" id="cmaf-toggle"></div>
             </div>
 
@@ -824,7 +818,6 @@
         availability: document.getElementById('availability'),
         sortBy: document.getElementById('sort-by'),
         sortOrder: document.getElementById('sort-order'),
-        encodedToggle: document.getElementById('encoded-toggle'),
         repackagedToggle: document.getElementById('repackaged-toggle'),
         cmafToggle: document.getElementById('cmaf-toggle'),
         encodedAfter: document.getElementById('encoded-after'),
@@ -854,10 +847,10 @@
         if (!guid || guid === 'N/A') {
             return `<span class="guid-text">${guid}</span>`;
         }
-        
+
         const deeplink = createVideoRobotDeeplink(guid);
         const displayGuid = guid.length > 30 ? guid.substring(0, 27) + '...' : guid;
-        
+
         return `
             <div class="guid-container">
                 <a href="${deeplink}" target="_blank" class="guid-link" title="Open in Video Robot (${guid})">
@@ -891,7 +884,7 @@
     function getLastEncodeDate(item) {
         // This would come from your actual API data
         // For demo purposes, generating a date based on updated_timestamp
-        if (item.premium_features && item.premium_features.some(f => 
+        if (item.premium_features && item.premium_features.some(f =>
             f.toLowerCase().includes('encode') || f.toLowerCase().includes('encoded'))) {
             const baseDate = item.updated_timestamp || Date.now();
             return baseDate - (Math.random() * 7 * 24 * 60 * 60 * 1000); // Random date within last week
@@ -902,7 +895,7 @@
     function getLastPackageDate(item) {
         // This would come from your actual API data
         // For demo purposes, generating a date based on updated_timestamp
-        if (item.premium_features && item.premium_features.some(f => 
+        if (item.premium_features && item.premium_features.some(f =>
             f.toLowerCase().includes('repackage') || f.toLowerCase().includes('package'))) {
             const baseDate = item.updated_timestamp || Date.now();
             return baseDate - (Math.random() * 5 * 24 * 60 * 60 * 1000); // Random date within last 5 days
@@ -998,7 +991,7 @@
 
     // Toggle functionality
     function initializeToggles() {
-        [elements.encodedToggle, elements.repackagedToggle, elements.cmafToggle].forEach(toggle => {
+        [elements.repackagedToggle, elements.cmafToggle].forEach(toggle => {
             toggle.addEventListener('click', () => {
                 toggle.classList.toggle('active');
                 loadData();
@@ -1207,7 +1200,6 @@
 
     // Render media table
     function renderMediaTable(data) {
-        const encodedOnly = elements.encodedToggle.classList.contains('active');
         const repackagedOnly = elements.repackagedToggle.classList.contains('active');
         const cmafOnly = elements.cmafToggle.classList.contains('active');
         const encodedAfter = elements.encodedAfter.value ? new Date(elements.encodedAfter.value).getTime() : null;
@@ -1216,11 +1208,10 @@
         let filteredData = data;
 
         // Apply advanced filters
-        if (encodedOnly || repackagedOnly || cmafOnly || encodedAfter || repackagedAfter) {
+        if (repackagedOnly || cmafOnly || encodedAfter || repackagedAfter) {
+            const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000); // 7 days in milliseconds
+
             filteredData = data.filter(item => {
-                const hasEncoded = item.premium_features && item.premium_features.some(f =>
-                    f.toLowerCase().includes('encode') || f.toLowerCase().includes('encoded')
-                );
                 const hasRepackaged = item.premium_features && item.premium_features.some(f =>
                     f.toLowerCase().includes('repackage') || f.toLowerCase().includes('repackaged')
                 );
@@ -1230,8 +1221,12 @@
                     f.toLowerCase().includes('hls')
                 );
 
-                if (encodedOnly && !hasEncoded) return false;
-                if (repackagedOnly && !hasRepackaged) return false;
+                if (repackagedOnly) {
+                    // Check if item has repackaged feature AND was repackaged in last 7 days
+                    if (!hasRepackaged) return false;
+                    const lastPackageDate = getLastPackageDate(item);
+                    if (!lastPackageDate || lastPackageDate < sevenDaysAgo) return false;
+                }
                 if (cmafOnly && !hasCMAF) return false;
 
                 if (encodedAfter && (!item.updated_timestamp || item.updated_timestamp < encodedAfter)) return false;
