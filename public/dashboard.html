@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Media Vault Dashboard</title>
     <style>
-        /* Design tokens matching App.css */
+        /* Design tokens */
         :root {
             --bg: #0f172a;
             --surface: #111827;
@@ -68,7 +68,7 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 1rem;
-            margin-bottom: 1rem;
+            margin-bottom: 1.5rem;
         }
 
         .control-group {
@@ -102,107 +102,45 @@
             background: color-mix(in oklab, var(--surface-2), var(--primary) 6%);
         }
 
-        /* Column Filter Section */
-        .column-filters {
-            background: var(--surface-2);
-            border: 1px solid var(--border-light);
-            border-radius: 8px;
-            padding: 1rem;
-            margin-bottom: 1rem;
-        }
-
-        .column-filters h3 {
-            margin: 0 0 1rem 0;
-            font-size: 1rem;
-            color: var(--text);
-            font-weight: 600;
-        }
-
-        .column-filter-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 0.75rem;
-        }
-
-        .column-filter-group {
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-        }
-
-        .column-filter-group label {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            font-weight: 500;
-        }
-
-        .column-filter-group select {
-            padding: 0.5rem;
-            font-size: 0.85rem;
-            background: var(--bg);
-            border: 1px solid var(--border);
-            color: var(--text);
-            border-radius: 6px;
-        }
-
-        /* Multi-Select Filter Section */
+        /* Multi-Select Filters */
         .multi-select-filters {
             background: var(--surface-2);
             border: 1px solid var(--border-light);
             border-radius: 8px;
-            padding: 1rem;
-            margin-top: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
         }
 
         .multi-select-filters h3 {
-            margin: 0 0 1rem 0;
-            font-size: 1rem;
+            margin: 0 0 1.5rem 0;
+            font-size: 1.1rem;
+            color: var(--text);
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .filters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .filter-group label {
+            font-size: 0.9rem;
             color: var(--text);
             font-weight: 600;
         }
 
-        .active-filters {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-        }
-
-        .filter-chip {
-            background: var(--primary);
-            color: white;
-            padding: 0.25rem 0.5rem;
-            border-radius: 999px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-        }
-
-        .filter-chip .remove-chip {
-            background: rgba(255,255,255,0.2);
-            border: none;
-            color: white;
-            border-radius: 50%;
-            width: 16px;
-            height: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 12px;
-            line-height: 1;
-        }
-
-        .filter-chip .remove-chip:hover {
-            background: rgba(255,255,255,0.3);
-        }
-
         .multi-select-container {
             position: relative;
-            display: inline-block;
-            min-width: 250px;
+            display: block;
         }
 
         .multi-select-button {
@@ -217,10 +155,16 @@
             align-items: center;
             width: 100%;
             font-size: 0.9rem;
+            transition: border-color 0.2s ease;
         }
 
         .multi-select-button:hover {
             border-color: var(--primary);
+        }
+
+        .multi-select-button.active {
+            border-color: var(--primary);
+            background: color-mix(in oklab, var(--bg), var(--primary) 8%);
         }
 
         .multi-select-dropdown {
@@ -233,8 +177,9 @@
             border-radius: 8px;
             box-shadow: var(--shadow);
             z-index: 1000;
-            max-height: 250px;
+            max-height: 300px;
             display: none;
+            margin-top: 2px;
         }
 
         .multi-select-dropdown.open {
@@ -266,18 +211,19 @@
         }
 
         .multi-select-options {
-            max-height: 180px;
+            max-height: 200px;
             overflow-y: auto;
         }
 
         .multi-select-option {
-            padding: 0.5rem 0.75rem;
+            padding: 0.6rem 0.75rem;
             cursor: pointer;
             display: flex;
             align-items: center;
             gap: 0.5rem;
             font-size: 0.85rem;
             border-bottom: 1px solid var(--border-light);
+            transition: background 0.2s ease;
         }
 
         .multi-select-option:last-child {
@@ -305,140 +251,85 @@
             font-size: 0.85rem;
         }
 
-        .toggle-controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1rem;
-            align-items: center;
-            margin-top: 1rem;
-            padding-top: 1rem;
-            border-top: 1px solid var(--border);
+        /* Active Filters */
+        .active-filters-section {
+            margin-bottom: 1.5rem;
         }
 
-        .toggle-group {
+        .active-filters-title {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+            font-weight: 500;
+        }
+
+        .active-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            min-height: 32px;
+        }
+
+        .filter-chip {
+            background: var(--primary);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 600;
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            animation: slideIn 0.2s ease-out;
         }
 
-        .toggle {
-            position: relative;
-            width: 48px;
-            height: 24px;
-            background: #374151;
-            border-radius: 12px;
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .filter-chip-category {
+            opacity: 0.8;
+            font-size: 0.7rem;
+        }
+
+        .filter-chip .remove-chip {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 14px;
+            line-height: 1;
+            transition: background 0.2s ease;
+        }
+
+        .filter-chip .remove-chip:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .clear-all-filters {
+            background: var(--danger);
+            color: white;
+            border: none;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
             cursor: pointer;
             transition: background 0.2s ease;
         }
 
-        .toggle.active {
-            background: var(--primary);
+        .clear-all-filters:hover {
+            background: var(--danger-hover);
         }
 
-        .toggle::before {
-            content: '';
-            position: absolute;
-            top: 2px;
-            left: 2px;
-            width: 20px;
-            height: 20px;
-            background: white;
-            border-radius: 50%;
-            transition: transform 0.2s ease;
-        }
-
-        .toggle.active::before {
-            transform: translateX(24px);
-        }
-
-        .date-picker {
-            position: relative;
-        }
-
-        .date-picker input {
-            width: 100%;
-        }
-
-        /* Horizontal Navigation Slider */
-        .horizontal-slider {
-            background: var(--surface-2);
-            padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .slider-label {
-            font-weight: 600;
-            color: var(--text);
-            font-size: 0.9rem;
-            white-space: nowrap;
-        }
-
-        .slider-container {
-            flex: 1;
-            position: relative;
-            height: 40px;
-            display: flex;
-            align-items: center;
-        }
-
-        .range-slider {
-            width: 100%;
-            height: 6px;
-            background: var(--border);
-            border-radius: 3px;
-            outline: none;
-            -webkit-appearance: none;
-            cursor: pointer;
-        }
-
-        .range-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 20px;
-            height: 20px;
-            background: var(--primary);
-            border-radius: 50%;
-            cursor: pointer;
-            box-shadow: 0 2px 6px rgba(96, 165, 250, 0.3);
-            transition: all 0.2s ease;
-        }
-
-        .range-slider::-webkit-slider-thumb:hover {
-            background: var(--primary-hover);
-            transform: scale(1.1);
-            box-shadow: 0 4px 12px rgba(96, 165, 250, 0.5);
-        }
-
-        .range-slider::-moz-range-thumb {
-            width: 20px;
-            height: 20px;
-            background: var(--primary);
-            border-radius: 50%;
-            cursor: pointer;
-            border: none;
-            box-shadow: 0 2px 6px rgba(96, 165, 250, 0.3);
-            transition: all 0.2s ease;
-        }
-
-        .range-slider::-moz-range-thumb:hover {
-            background: var(--primary-hover);
-            transform: scale(1.1);
-        }
-
-        .slider-value {
-            background: var(--primary);
-            color: white;
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            min-width: 60px;
-            text-align: center;
-        }
-
+        /* Stats Bar */
         .stats-bar {
             background: var(--surface-2);
             padding: 1rem;
@@ -467,13 +358,13 @@
             color: var(--text-muted);
         }
 
+        /* Table Styles */
         .media-table-container {
             background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02)), var(--surface);
             border: 1px solid var(--border);
             border-radius: var(--radius);
             overflow: hidden;
             box-shadow: var(--shadow);
-            position: relative;
         }
 
         .table-wrapper {
@@ -486,7 +377,7 @@
             width: 100%;
             border-collapse: collapse;
             table-layout: fixed;
-            min-width: 1600px;
+            min-width: 1400px;
         }
 
         .media-table th {
@@ -501,52 +392,8 @@
             position: sticky;
             top: 0;
             z-index: 10;
-            position: relative;
             user-select: none;
         }
-
-        /* Resizable column headers */
-        .media-table th.resizable {
-            position: relative;
-            min-width: 80px;
-        }
-
-        .media-table th.resizable::after {
-            content: '';
-            position: absolute;
-            right: 0;
-            top: 0;
-            bottom: 0;
-            width: 4px;
-            background: transparent;
-            cursor: col-resize;
-            user-select: none;
-        }
-
-        .media-table th.resizable:hover::after {
-            background: var(--primary);
-            opacity: 0.5;
-        }
-
-        .media-table th.resizing::after {
-            background: var(--primary);
-            opacity: 0.8;
-        }
-
-        /* Default column widths */
-        .col-title { width: 300px; }
-        .col-series { width: 250px; }
-        .col-season-episode { width: 80px; }
-        .col-type { width: 120px; }
-        .col-availability { width: 140px; }
-        .col-features { width: 200px; }
-        .col-streaming-properties { width: 200px; }
-        .col-cmaf { width: 100px; }
-        .col-updated { width: 160px; }
-        .col-added { width: 160px; }
-        .col-last-encode { width: 160px; }
-        .col-last-package { width: 160px; }
-        .col-guid { width: 200px; }
 
         .media-table td {
             padding: 0.75rem;
@@ -563,102 +410,15 @@
             background: color-mix(in oklab, var(--surface), var(--primary) 4%);
         }
 
-        .media-table tr:last-child td {
-            border-bottom: none;
-        }
-
-        /* Expandable content */
-        .expandable-content {
-            position: relative;
-            cursor: pointer;
-        }
-
-        .expandable-content.expanded {
-            white-space: normal;
-            word-wrap: break-word;
-        }
-
-        .expand-icon {
-            position: absolute;
-            right: 4px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 16px;
-            height: 16px;
-            background: var(--primary);
-            border-radius: 3px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 10px;
-            font-weight: bold;
-            color: white;
-            opacity: 0.7;
-            transition: opacity 0.2s ease;
-        }
-
-        .expandable-content:hover .expand-icon {
-            opacity: 1;
-        }
-
-        /* CMAF Toggle Styles */
-        .cmaf-toggle {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            cursor: pointer;
-            padding: 0.25rem 0.5rem;
-            border-radius: 6px;
-            transition: background 0.2s ease;
-        }
-
-        .cmaf-toggle:hover {
-            background: color-mix(in oklab, var(--surface-2), var(--primary) 10%);
-        }
-
-        .cmaf-checkbox {
-            width: 16px;
-            height: 16px;
-            border: 2px solid var(--border);
-            border-radius: 3px;
-            background: var(--surface-2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-        }
-
-        .cmaf-checkbox.checked {
-            background: var(--accent);
-            border-color: var(--accent);
-        }
-
-        .cmaf-checkbox::after {
-            content: '✓';
-            color: white;
-            font-size: 12px;
-            font-weight: bold;
-            opacity: 0;
-            transition: opacity 0.2s ease;
-        }
-
-        .cmaf-checkbox.checked::after {
-            opacity: 1;
-        }
-
-        .cmaf-label {
-            font-size: 0.8rem;
-            font-weight: 600;
-            user-select: none;
-        }
-
-        .cmaf-true {
-            color: var(--accent);
-        }
-
-        .cmaf-false {
-            color: var(--text-muted);
-        }
+        /* Column widths */
+        .col-title { width: 300px; }
+        .col-series { width: 250px; }
+        .col-season-episode { width: 80px; }
+        .col-type { width: 120px; }
+        .col-availability { width: 140px; }
+        .col-features { width: 200px; }
+        .col-updated { width: 160px; }
+        .col-guid { width: 200px; }
 
         .feature-tags {
             display: flex;
@@ -667,35 +427,17 @@
         }
 
         .feature-tag {
-            background: var(--primary);
+            background: var(--accent);
             color: white;
             padding: 0.15rem 0.4rem;
             border-radius: 999px;
             font-size: 0.7rem;
             font-weight: 600;
-            letter-spacing: 0.1px;
-            white-space: nowrap;
-        }
-
-        .streaming-property-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.25rem;
-        }
-
-        .streaming-property-tag {
-            background: var(--warning);
-            color: var(--text-dark);
-            padding: 0.15rem 0.4rem;
-            border-radius: 999px;
-            font-size: 0.7rem;
-            font-weight: 600;
-            letter-spacing: 0.1px;
             white-space: nowrap;
         }
 
         .content-type-badge {
-            background: var(--accent);
+            background: var(--primary);
             color: white;
             padding: 0.2rem 0.5rem;
             border-radius: 4px;
@@ -727,6 +469,7 @@
             color: white;
         }
 
+        /* Pagination */
         .pagination {
             display: flex;
             justify-content: center;
@@ -772,98 +515,15 @@
             margin: 1rem 0;
         }
 
-        .guid-container {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .guid-link {
-            color: var(--primary);
-            text-decoration: none;
-            flex: 1;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .guid-link:hover {
-            color: var(--primary-hover);
-            text-decoration: underline;
-        }
-
-        .copy-guid-btn {
-            background: none;
-            border: 1px solid var(--border);
-            color: var(--text-muted);
-            padding: 0.2rem 0.4rem;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.8rem;
-            transition: all 0.2s ease;
-            flex-shrink: 0;
-        }
-
-        .copy-guid-btn:hover {
-            background: var(--surface-2);
-            color: var(--text);
-            border-color: var(--primary);
-        }
-
-        .guid-text {
-            color: var(--text-muted);
-            font-style: italic;
-        }
-
-        .date-na {
-            color: var(--text-muted);
-            font-style: italic;
-        }
-
-        .date-display {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-        }
-
-        /* Column resize indicator */
-        .resize-line {
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            width: 2px;
-            background: var(--primary);
-            opacity: 0.8;
-            pointer-events: none;
-            z-index: 1000;
-            display: none;
-        }
-
         @media (max-width: 768px) {
-            .controls-grid {
+            .controls-grid,
+            .filters-grid {
                 grid-template-columns: 1fr;
             }
 
-            .column-filter-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .toggle-controls {
+            .stats-bar {
                 flex-direction: column;
-                align-items: stretch;
-            }
-
-            .toggle-group {
-                justify-content: space-between;
-            }
-
-            .horizontal-slider {
-                flex-direction: column;
-                gap: 0.5rem;
-                align-items: stretch;
-            }
-
-            .slider-container {
-                height: 50px;
+                gap: 1rem;
             }
         }
     </style>
@@ -873,45 +533,25 @@
     <h1>🎬 Media Vault Dashboard</h1>
 
     <div class="dashboard-controls">
+        <!-- Basic Controls -->
         <div class="controls-grid">
             <div class="control-group">
-                <label for="search">Search</label>
+                <label for="search">🔍 Search</label>
                 <input type="text" id="search" placeholder="Search titles...">
             </div>
 
             <div class="control-group">
-                <label for="series-filter">Series</label>
-                <input type="text" id="series-filter" placeholder="Filter by series...">
-            </div>
-
-            <div class="control-group">
-                <label for="content-type">Content Type</label>
-                <select id="content-type">
-                    <option value="">All Types</option>
-                </select>
-            </div>
-
-            <div class="control-group">
-                <label for="availability">Availability</label>
-                <select id="availability">
-                    <option value="">All Availability</option>
-                </select>
-            </div>
-
-            <div class="control-group">
-                <label for="sort-by">Sort By</label>
+                <label for="sort-by">📊 Sort By</label>
                 <select id="sort-by">
                     <option value="title">Title</option>
                     <option value="series_title">Series</option>
-                    <option value="season_number">Season</option>
-                    <option value="episode_number">Episode</option>
                     <option value="created_at">Date Added</option>
                     <option value="updated_timestamp">Last Updated</option>
                 </select>
             </div>
 
             <div class="control-group">
-                <label for="sort-order">Order</label>
+                <label for="sort-order">🔄 Order</label>
                 <select id="sort-order">
                     <option value="ASC">Ascending</option>
                     <option value="DESC">Descending</option>
@@ -919,124 +559,93 @@
             </div>
         </div>
 
-        <!-- Column Filters -->
-        <div class="column-filters">
-            <h3>📋 Column Filters</h3>
-            <div class="column-filter-grid">
-                <div class="column-filter-group">
-                    <label>Title</label>
-                    <select id="title-filter">
-                        <option value="">All Titles</option>
-                    </select>
-                </div>
-                <div class="column-filter-group">
-                    <label>Series</label>
-                    <select id="series-column-filter">
-                        <option value="">All Series</option>
-                    </select>
-                </div>
-                <div class="column-filter-group">
-                    <label>Season</label>
-                    <select id="season-filter">
-                        <option value="">All Seasons</option>
-                    </select>
-                </div>
-                <div class="column-filter-group">
-                    <label>Episode</label>
-                    <select id="episode-filter">
-                        <option value="">All Episodes</option>
-                    </select>
-                </div>
-                <div class="column-filter-group">
-                    <label>Content Type</label>
-                    <select id="content-type-column-filter">
-                        <option value="">All Types</option>
-                    </select>
-                </div>
-                <div class="column-filter-group">
-                    <label>Availability</label>
-                    <select id="availability-column-filter">
-                        <option value="">All States</option>
-                    </select>
-                </div>
-                <div class="column-filter-group">
-                    <label>Features</label>
-                    <select id="features-filter">
-                        <option value="">Select Feature...</option>
-                    </select>
-                </div>
-                <div class="column-filter-group">
-                    <label>Streaming Properties</label>
-                    <select id="streaming-properties-filter">
-                        <option value="">Select Property...</option>
-                    </select>
-                </div>
-                <div class="column-filter-group">
-                    <label>CMAF</label>
-                    <select id="cmaf-column-filter">
-                        <option value="">All CMAF</option>
-                        <option value="true">CMAF Enabled</option>
-                        <option value="false">CMAF Disabled</option>
-                    </select>
-                </div>
-                <div class="column-filter-group">
-                    <label>GUID</label>
-                    <select id="guid-filter">
-                        <option value="">All GUIDs</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-
         <!-- Multi-Select Filters -->
-        <div class="multi-select-filters" id="multi-select-section" style="display: none;">
-            <h3>🔍 Multi-Value Filter</h3>
-            <div class="active-filters" id="active-filters">
-                <!-- Filter chips will appear here -->
-            </div>
-            <div class="multi-select-container">
-                <button class="multi-select-button" id="multi-select-button">
-                    <span id="multi-select-text">Select values...</span>
-                    <span>▼</span>
-                </button>
-                <div class="multi-select-dropdown" id="multi-select-dropdown">
-                    <!-- Options will be populated here -->
+        <div class="multi-select-filters">
+            <h3>🎯 Advanced Filters</h3>
+
+            <!-- Active Filters Display -->
+            <div class="active-filters-section">
+                <div class="active-filters-title">Active Filters:</div>
+                <div class="active-filters" id="active-filters">
+                    <span style="color: var(--text-muted); font-style: italic;">No filters applied</span>
                 </div>
             </div>
-        </div>
 
-        <!-- Horizontal Navigation Slider -->
-        <div class="horizontal-slider">
-            <div class="slider-label">Navigate Records:</div>
-            <div class="slider-container">
-                <input type="range" id="record-slider" class="range-slider" min="1" max="100" value="1">
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label>📺 Series</label>
+                    <div class="multi-select-container">
+                        <button class="multi-select-button" data-filter="series">
+                            <span>Select series...</span>
+                            <span>▼</span>
+                        </button>
+                        <div class="multi-select-dropdown"></div>
+                    </div>
+                </div>
+
+                <div class="filter-group">
+                    <label>🎭 Content Type</label>
+                    <div class="multi-select-container">
+                        <button class="multi-select-button" data-filter="contentType">
+                            <span>Select types...</span>
+                            <span>▼</span>
+                        </button>
+                        <div class="multi-select-dropdown"></div>
+                    </div>
+                </div>
+
+                <div class="filter-group">
+                    <label>📡 Availability</label>
+                    <div class="multi-select-container">
+                        <button class="multi-select-button" data-filter="availability">
+                            <span>Select availability...</span>
+                            <span>▼</span>
+                        </button>
+                        <div class="multi-select-dropdown"></div>
+                    </div>
+                </div>
+
+                <div class="filter-group">
+                    <label>⭐ Features</label>
+                    <div class="multi-select-container">
+                        <button class="multi-select-button" data-filter="features">
+                            <span>Select features...</span>
+                            <span>▼</span>
+                        </button>
+                        <div class="multi-select-dropdown"></div>
+                    </div>
+                </div>
+
+                <div class="filter-group">
+                    <label>🔢 Season</label>
+                    <div class="multi-select-container">
+                        <button class="multi-select-button" data-filter="season">
+                            <span>Select seasons...</span>
+                            <span>▼</span>
+                        </button>
+                        <div class="multi-select-dropdown"></div>
+                    </div>
+                </div>
+
+                <div class="filter-group">
+                    <label>🎬 Episode</label>
+                    <div class="multi-select-container">
+                        <button class="multi-select-button" data-filter="episode">
+                            <span>Select episodes...</span>
+                            <span>▼</span>
+                        </button>
+                        <div class="multi-select-dropdown"></div>
+                    </div>
+                </div>
             </div>
-            <div class="slider-value" id="slider-value">1 / 100</div>
-        </div>
 
-        <div class="toggle-controls">
-            <div class="toggle-group">
-                <label>Show Repackaged Last 7 Days Only</label>
-                <div class="toggle" id="repackaged-toggle"></div>
-            </div>
-
-            <div class="toggle-group">
-                <label>Show CMAF Only</label>
-                <div class="toggle" id="cmaf-toggle"></div>
-            </div>
-
-            <div class="date-picker">
-                <label>Encoded After:</label>
-                <input type="datetime-local" id="encoded-after">
-            </div>
-
-            <div class="date-picker">
-                <label>Repackaged After:</label>
-                <input type="datetime-local" id="repackaged-after">
+            <div style="text-align: center;">
+                <button class="clear-all-filters" id="clear-all-filters">🗑️ Clear All Filters</button>
             </div>
         </div>
     </div>
 
+    <!-- Stats Bar -->
     <div class="stats-bar">
         <div class="stat-item">
             <span class="stat-number" id="total-items">0</span>
@@ -1054,16 +663,9 @@
             <span class="stat-number" id="encoded-count">0</span>
             <span class="stat-label">Encoded</span>
         </div>
-        <div class="stat-item">
-            <span class="stat-number" id="repackaged-count">0</span>
-            <span class="stat-label">Repackaged</span>
-        </div>
-        <div class="stat-item">
-            <span class="stat-number" id="cmaf-count">0</span>
-            <span class="stat-label">CMAF Encoded</span>
-        </div>
     </div>
 
+    <!-- Media Table -->
     <div class="media-table-container">
         <div class="loading" id="loading">Loading media data...</div>
         <div class="error" id="error" style="display: none;"></div>
@@ -1072,19 +674,14 @@
             <table class="media-table" id="media-table">
                 <thead>
                 <tr>
-                    <th class="resizable col-title" data-column="title">Title</th>
-                    <th class="resizable col-series" data-column="series">Series</th>
-                    <th class="resizable col-season-episode" data-column="season-episode">S/E</th>
-                    <th class="resizable col-type" data-column="type">Type</th>
-                    <th class="resizable col-availability" data-column="availability">Availability</th>
-                    <th class="resizable col-features" data-column="features">Features</th>
-                    <th class="resizable col-streaming-properties" data-column="streaming-properties">Streaming Properties</th>
-                    <th class="resizable col-cmaf" data-column="cmaf">CMAF</th>
-                    <th class="resizable col-updated" data-column="updated">Updated</th>
-                    <th class="resizable col-added" data-column="added">Added</th>
-                    <th class="resizable col-last-encode" data-column="last-encode">Last Encode</th>
-                    <th class="resizable col-last-package" data-column="last-package">Last Package</th>
-                    <th class="resizable col-guid" data-column="guid">GUID</th>
+                    <th class="col-title">Title</th>
+                    <th class="col-series">Series</th>
+                    <th class="col-season-episode">S/E</th>
+                    <th class="col-type">Type</th>
+                    <th class="col-availability">Availability</th>
+                    <th class="col-features">Features</th>
+                    <th class="col-updated">Updated</th>
+                    <th class="col-guid">GUID</th>
                 </tr>
                 </thead>
                 <tbody id="media-tbody">
@@ -1100,8 +697,6 @@
     </div>
 </div>
 
-<div class="resize-line" id="resize-line"></div>
-
 <script>
     const API_BASE = 'http://localhost:3001/api';
 
@@ -1109,36 +704,64 @@
     let totalPages = 1;
     let totalItems = 0;
     let isLoading = false;
-    let allStats = {};
     let currentData = [];
-    let allColumnData = {};
-    let activeColumnFilter = null;
-    let activeMultiSelectValues = new Set();
+    let allStats = {};
 
-    // Column resizing variables
-    let isResizing = false;
-    let currentColumn = null;
-    let startX = 0;
-    let startWidth = 0;
+    // Active filters store
+    const activeFilters = {
+        series: new Set(),
+        contentType: new Set(),
+        availability: new Set(),
+        features: new Set(),
+        season: new Set(),
+        episode: new Set()
+    };
+
+    // Filter configurations
+    const filterConfigs = {
+        series: {
+            field: 'series_title',
+            label: 'Series',
+            icon: '📺'
+        },
+        contentType: {
+            field: 'content_type',
+            label: 'Content Type',
+            icon: '🎭'
+        },
+        availability: {
+            field: 'availability_state',
+            label: 'Availability',
+            icon: '📡'
+        },
+        features: {
+            field: 'premium_features',
+            label: 'Features',
+            icon: '⭐',
+            isArray: true
+        },
+        season: {
+            field: 'season_number',
+            label: 'Season',
+            icon: '🔢'
+        },
+        episode: {
+            field: 'episode_number',
+            label: 'Episode',
+            icon: '🎬'
+        }
+    };
 
     // DOM Elements
     const elements = {
         loading: document.getElementById('loading'),
         error: document.getElementById('error'),
-        mediaTable: document.getElementById('media-table'),
         tableWrapper: document.getElementById('table-wrapper'),
         mediaTbody: document.getElementById('media-tbody'),
         pagination: document.getElementById('pagination'),
         search: document.getElementById('search'),
-        seriesFilter: document.getElementById('series-filter'),
-        contentType: document.getElementById('content-type'),
-        availability: document.getElementById('availability'),
         sortBy: document.getElementById('sort-by'),
         sortOrder: document.getElementById('sort-order'),
-        repackagedToggle: document.getElementById('repackaged-toggle'),
-        cmafToggle: document.getElementById('cmaf-toggle'),
-        encodedAfter: document.getElementById('encoded-after'),
-        repackagedAfter: document.getElementById('repackaged-after'),
         prevBtn: document.getElementById('prev-btn'),
         nextBtn: document.getElementById('next-btn'),
         pageInfo: document.getElementById('page-info'),
@@ -1146,155 +769,114 @@
         filteredItems: document.getElementById('filtered-items'),
         totalSeries: document.getElementById('total-series'),
         encodedCount: document.getElementById('encoded-count'),
-        repackagedCount: document.getElementById('repackaged-count'),
-        cmafCount: document.getElementById('cmaf-count'),
-        resizeLine: document.getElementById('resize-line'),
-        recordSlider: document.getElementById('record-slider'),
-        sliderValue: document.getElementById('slider-value'),
-
-        // Column filters
-        titleFilter: document.getElementById('title-filter'),
-        seriesColumnFilter: document.getElementById('series-column-filter'),
-        seasonFilter: document.getElementById('season-filter'),
-        episodeFilter: document.getElementById('episode-filter'),
-        contentTypeColumnFilter: document.getElementById('content-type-column-filter'),
-        availabilityColumnFilter: document.getElementById('availability-column-filter'),
-        featuresFilter: document.getElementById('features-filter'),
-        streamingPropertiesFilter: document.getElementById('streaming-properties-filter'),
-        cmafColumnFilter: document.getElementById('cmaf-column-filter'),
-        guidFilter: document.getElementById('guid-filter'),
-
-        // Multi-select elements
-        multiSelectSection: document.getElementById('multi-select-section'),
-        multiSelectButton: document.getElementById('multi-select-button'),
-        multiSelectText: document.getElementById('multi-select-text'),
-        multiSelectDropdown: document.getElementById('multi-select-dropdown'),
-        activeFilters: document.getElementById('active-filters')
+        activeFilters: document.getElementById('active-filters'),
+        clearAllFilters: document.getElementById('clear-all-filters')
     };
 
-    // Column filter mapping
-    const columnFilterMapping = {
-        'title-filter': { field: 'title', label: 'Title' },
-        'series-column-filter': { field: 'series_title', label: 'Series' },
-        'season-filter': { field: 'season_number', label: 'Season' },
-        'episode-filter': { field: 'episode_number', label: 'Episode' },
-        'content-type-column-filter': { field: 'content_type', label: 'Content Type' },
-        'availability-column-filter': { field: 'availability_state', label: 'Availability' },
-        'features-filter': { field: 'premium_features', label: 'Features', isArray: true },
-        'streaming-properties-filter': { field: 'streaming_properties', label: 'Streaming Properties', isArray: true },
-        'cmaf-column-filter': { field: 'cmaf', label: 'CMAF', isBoolean: true },
-        'guid-filter': { field: 'guid', label: 'GUID' }
-    };
-
-    // Deep linking functionality
-    function createVideoRobotDeeplink(guid) {
-        if (!guid || guid === 'N/A') return null;
-        return `https://videorobot-ent.paramountplus.com/jobs/show_jobs?limit=25&offset=0&order_by=desc&sort_by=id&bu=all&show_qc=true&ref_id=${guid}`;
-    }
-
-    // Render GUID with deeplink
-    function renderGUIDWithLink(guid) {
-        if (!guid || guid === 'N/A') {
-            return `<span class="guid-text">${guid}</span>`;
-        }
-
-        const deeplink = createVideoRobotDeeplink(guid);
-        const displayGuid = guid.length > 30 ? guid.substring(0, 27) + '...' : guid;
-
-        return `
-            <div class="guid-container">
-                <a href="${deeplink}" target="_blank" class="guid-link" title="Open in Video Robot (${guid})">
-                    ${displayGuid}
-                </a>
-                <button class="copy-guid-btn" onclick="copyToClipboard('${guid}')" title="Copy GUID">
-                    📋
-                </button>
-            </div>
-        `;
-    }
-
-    // Copy to clipboard functionality
-    function copyToClipboard(text) {
-        navigator.clipboard.writeText(text).then(() => {
-            const btn = event.target;
-            const originalText = btn.textContent;
-            btn.textContent = '✓';
-            btn.style.color = 'var(--accent)';
-            setTimeout(() => {
-                btn.textContent = originalText;
-                btn.style.color = '';
-            }, 1000);
-        }).catch(err => {
-            console.error('Failed to copy: ', err);
-        });
-    }
-
-    // Multi-select functionality with search
+    // Initialize multi-select functionality
     function initializeMultiSelect() {
-        elements.multiSelectButton.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const isOpen = elements.multiSelectDropdown.classList.contains('open');
-            elements.multiSelectDropdown.classList.toggle('open');
-            
-            if (!isOpen) {
-                // Focus search input when dropdown opens
-                const searchInput = elements.multiSelectDropdown.querySelector('.multi-select-search input');
-                if (searchInput) {
-                    setTimeout(() => searchInput.focus(), 100);
+        const buttons = document.querySelectorAll('.multi-select-button');
+
+        buttons.forEach(button => {
+            const container = button.closest('.multi-select-container');
+            const dropdown = container.querySelector('.multi-select-dropdown');
+            const filterType = button.getAttribute('data-filter');
+
+            button.addEventListener('click', (e) => {
+                e.stopPropagation();
+
+                // Close other dropdowns
+                buttons.forEach(otherButton => {
+                    if (otherButton !== button) {
+                        const otherContainer = otherButton.closest('.multi-select-container');
+                        const otherDropdown = otherContainer.querySelector('.multi-select-dropdown');
+                        otherDropdown.classList.remove('open');
+                        otherButton.classList.remove('active');
+                    }
+                });
+
+                // Toggle current dropdown
+                const isOpen = dropdown.classList.contains('open');
+                dropdown.classList.toggle('open');
+                button.classList.toggle('active');
+
+                if (!isOpen) {
+                    populateDropdown(filterType, dropdown);
+                    const searchInput = dropdown.querySelector('.multi-select-search input');
+                    if (searchInput) {
+                        setTimeout(() => searchInput.focus(), 100);
+                    }
                 }
+            });
+        });
+
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.multi-select-container')) {
+                buttons.forEach(button => {
+                    const container = button.closest('.multi-select-container');
+                    const dropdown = container.querySelector('.multi-select-dropdown');
+                    dropdown.classList.remove('open');
+                    button.classList.remove('active');
+                });
             }
         });
 
-        document.addEventListener('click', (e) => {
-            if (!elements.multiSelectDropdown.contains(e.target) && e.target !== elements.multiSelectButton) {
-                elements.multiSelectDropdown.classList.remove('open');
-            }
-        });
+        // Clear all filters
+        elements.clearAllFilters.addEventListener('click', clearAllFilters);
     }
 
-    function populateMultiSelectOptions(values, filterConfig) {
-        elements.multiSelectDropdown.innerHTML = '';
+    function populateDropdown(filterType, dropdown) {
+        const config = filterConfigs[filterType];
+        const values = getUniqueValues(config);
+
+        dropdown.innerHTML = '';
 
         // Add search input
         const searchContainer = document.createElement('div');
         searchContainer.className = 'multi-select-search';
-        
+
         const searchInput = document.createElement('input');
         searchInput.type = 'text';
-        searchInput.placeholder = 'Search options...';
+        searchInput.placeholder = `Search ${config.label.toLowerCase()}...`;
         searchInput.addEventListener('input', (e) => {
-            filterMultiSelectOptions(e.target.value);
+            filterDropdownOptions(dropdown, e.target.value);
         });
-        
-        // Prevent dropdown from closing when typing
         searchInput.addEventListener('click', (e) => e.stopPropagation());
-        
+
         searchContainer.appendChild(searchInput);
-        elements.multiSelectDropdown.appendChild(searchContainer);
+        dropdown.appendChild(searchContainer);
 
         // Add options container
         const optionsContainer = document.createElement('div');
         optionsContainer.className = 'multi-select-options';
-        
-        const sortedValues = [...values].sort();
+
+        const sortedValues = [...values].sort((a, b) => {
+            // Sort numbers numerically, strings alphabetically
+            if (!isNaN(a) && !isNaN(b)) {
+                return parseInt(a) - parseInt(b);
+            }
+            return a.toString().localeCompare(b.toString());
+        });
 
         sortedValues.forEach(value => {
             const option = document.createElement('div');
             option.className = 'multi-select-option';
-            option.setAttribute('data-value', value.toLowerCase());
+            option.setAttribute('data-value', value.toString().toLowerCase());
 
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.value = value;
-            checkbox.checked = activeMultiSelectValues.has(value);
+            checkbox.checked = activeFilters[filterType].has(value.toString());
 
             checkbox.addEventListener('change', (e) => {
                 if (e.target.checked) {
-                    activeMultiSelectValues.add(value);
+                    activeFilters[filterType].add(value.toString());
                 } else {
-                    activeMultiSelectValues.delete(value);
+                    activeFilters[filterType].delete(value.toString());
                 }
-                updateActiveFilters();
+                updateActiveFiltersDisplay();
+                updateButtonText(filterType);
                 loadData();
             });
 
@@ -1306,26 +888,27 @@
             optionsContainer.appendChild(option);
         });
 
-        elements.multiSelectDropdown.appendChild(optionsContainer);
-        
-        // Add no results message (initially hidden)
+        dropdown.appendChild(optionsContainer);
+
+        // Add no results message
         const noResults = document.createElement('div');
         noResults.className = 'no-results';
         noResults.textContent = 'No options found';
         noResults.style.display = 'none';
-        elements.multiSelectDropdown.appendChild(noResults);
+        dropdown.appendChild(noResults);
     }
 
-    function filterMultiSelectOptions(searchTerm) {
-        const options = elements.multiSelectDropdown.querySelectorAll('.multi-select-option');
-        const noResults = elements.multiSelectDropdown.querySelector('.no-results');
+    function filterDropdownOptions(dropdown, searchTerm) {
+        const options = dropdown.querySelectorAll('.multi-select-option');
+        const noResults = dropdown.querySelector('.no-results');
         const searchLower = searchTerm.toLowerCase();
         let visibleCount = 0;
 
         options.forEach(option => {
             const value = option.getAttribute('data-value');
-            const isVisible = value.includes(searchLower) || option.querySelector('span').textContent.toLowerCase().includes(searchLower);
-            
+            const text = option.querySelector('span').textContent.toLowerCase();
+            const isVisible = value.includes(searchLower) || text.includes(searchLower);
+
             if (isVisible) {
                 option.classList.remove('hidden');
                 visibleCount++;
@@ -1334,112 +917,20 @@
             }
         });
 
-        // Show/hide no results message
-        if (visibleCount === 0 && searchTerm.trim() !== '') {
-            noResults.style.display = 'block';
-        } else {
-            noResults.style.display = 'none';
-        }
+        noResults.style.display = visibleCount === 0 && searchTerm.trim() !== '' ? 'block' : 'none';
     }
 
-    function updateActiveFilters() {
-        elements.activeFilters.innerHTML = '';
-
-        activeMultiSelectValues.forEach(value => {
-            const chip = document.createElement('div');
-            chip.className = 'filter-chip';
-
-            const text = document.createElement('span');
-            text.textContent = value;
-
-            const removeBtn = document.createElement('button');
-            removeBtn.className = 'remove-chip';
-            removeBtn.textContent = '×';
-            removeBtn.onclick = () => {
-                activeMultiSelectValues.delete(value);
-                updateActiveFilters();
-                updateMultiSelectCheckboxes();
-                loadData();
-            };
-
-            chip.appendChild(text);
-            chip.appendChild(removeBtn);
-            elements.activeFilters.appendChild(chip);
-        });
-
-        // Update button text
-        const count = activeMultiSelectValues.size;
-        if (count === 0) {
-            elements.multiSelectText.textContent = 'Select values...';
-        } else {
-            elements.multiSelectText.textContent = `${count} value${count > 1 ? 's' : ''} selected`;
-        }
-    }
-
-    function updateMultiSelectCheckboxes() {
-        const checkboxes = elements.multiSelectDropdown.querySelectorAll('input[type="checkbox"]');
-        checkboxes.forEach(checkbox => {
-            checkbox.checked = activeMultiSelectValues.has(checkbox.value);
-        });
-    }
-
-    // Column filter functionality
-    function initializeColumnFilters() {
-        Object.keys(columnFilterMapping).forEach(filterId => {
-            const element = elements[filterId.replace(/-([a-z])/g, (g) => g[1].toUpperCase())];
-            if (element) {
-                element.addEventListener('change', (e) => {
-                    handleColumnFilterChange(filterId, e.target.value);
-                });
-            }
-        });
-    }
-
-    function handleColumnFilterChange(filterId, value) {
-        const filterConfig = columnFilterMapping[filterId];
-
-        if (value && !filterConfig.isBoolean) {
-            // Show multi-select section
-            activeColumnFilter = { filterId, filterConfig, baseValue: value };
-            elements.multiSelectSection.style.display = 'block';
-
-            // Clear previous selections
-            activeMultiSelectValues.clear();
-
-            // Get unique values for this column and base filter
-            const uniqueValues = getUniqueValuesForFilter(filterConfig, value);
-            populateMultiSelectOptions(uniqueValues, filterConfig);
-            updateActiveFilters();
-
-            // Update section title
-            elements.multiSelectSection.querySelector('h3').textContent =
-                `🔍 Multi-Value Filter: ${filterConfig.label} (${uniqueValues.size} options)`;
-        } else {
-            // Hide multi-select section if no column filter is active
-            if (!value) {
-                activeColumnFilter = null;
-                activeMultiSelectValues.clear();
-                elements.multiSelectSection.style.display = 'none';
-                updateActiveFilters();
-            }
-        }
-
-        loadData();
-    }
-
-    function getUniqueValuesForFilter(filterConfig, baseValue) {
+    function getUniqueValues(config) {
         const values = new Set();
 
         currentData.forEach(item => {
-            let itemValue = item[filterConfig.field];
+            let itemValue = item[config.field];
 
-            if (filterConfig.isArray && Array.isArray(itemValue)) {
+            if (config.isArray && Array.isArray(itemValue)) {
                 itemValue.forEach(val => {
-                    if (val && val.toLowerCase().includes(baseValue.toLowerCase())) {
-                        values.add(val);
-                    }
+                    if (val) values.add(val);
                 });
-            } else if (itemValue && itemValue.toString().toLowerCase().includes(baseValue.toLowerCase())) {
+            } else if (itemValue !== null && itemValue !== undefined && itemValue !== '') {
                 values.add(itemValue.toString());
             }
         });
@@ -1447,238 +938,105 @@
         return values;
     }
 
-    function populateColumnFilters() {
-        // Populate all column filters with unique values from current data
-        const uniqueValues = {};
+    function updateButtonText(filterType) {
+        const button = document.querySelector(`[data-filter="${filterType}"]`);
+        const span = button.querySelector('span');
+        const count = activeFilters[filterType].size;
+        const config = filterConfigs[filterType];
 
-        // Initialize sets for each filter
-        Object.keys(columnFilterMapping).forEach(filterId => {
-            const config = columnFilterMapping[filterId];
-            if (!config.isBoolean) {
-                uniqueValues[filterId] = new Set();
-            }
+        if (count === 0) {
+            span.textContent = `Select ${config.label.toLowerCase()}...`;
+        } else {
+            span.textContent = `${count} ${config.label.toLowerCase()}${count > 1 ? 's' : ''} selected`;
+        }
+    }
+
+    function updateActiveFiltersDisplay() {
+        elements.activeFilters.innerHTML = '';
+        let hasFilters = false;
+
+        Object.keys(activeFilters).forEach(filterType => {
+            const config = filterConfigs[filterType];
+            activeFilters[filterType].forEach(value => {
+                hasFilters = true;
+                const chip = document.createElement('div');
+                chip.className = 'filter-chip';
+
+                const category = document.createElement('span');
+                category.className = 'filter-chip-category';
+                category.textContent = `${config.icon} ${config.label}:`;
+
+                const text = document.createElement('span');
+                text.textContent = value;
+
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'remove-chip';
+                removeBtn.textContent = '×';
+                removeBtn.onclick = () => {
+                    activeFilters[filterType].delete(value);
+                    updateActiveFiltersDisplay();
+                    updateButtonText(filterType);
+                    updateDropdownCheckboxes(filterType);
+                    loadData();
+                };
+
+                chip.appendChild(category);
+                chip.appendChild(text);
+                chip.appendChild(removeBtn);
+                elements.activeFilters.appendChild(chip);
+            });
         });
 
-        // Collect unique values
-        currentData.forEach(item => {
-            Object.keys(columnFilterMapping).forEach(filterId => {
-                const config = columnFilterMapping[filterId];
-                if (config.isBoolean) return;
+        if (!hasFilters) {
+            const placeholder = document.createElement('span');
+            placeholder.style.color = 'var(--text-muted)';
+            placeholder.style.fontStyle = 'italic';
+            placeholder.textContent = 'No filters applied';
+            elements.activeFilters.appendChild(placeholder);
+        }
+    }
 
-                let value = item[config.field];
+    function updateDropdownCheckboxes(filterType) {
+        const button = document.querySelector(`[data-filter="${filterType}"]`);
+        const dropdown = button.closest('.multi-select-container').querySelector('.multi-select-dropdown');
+        const checkboxes = dropdown.querySelectorAll('input[type="checkbox"]');
 
-                if (config.isArray && Array.isArray(value)) {
-                    value.forEach(v => {
-                        if (v) uniqueValues[filterId].add(v);
-                    });
-                } else if (value) {
-                    uniqueValues[filterId].add(value.toString());
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = activeFilters[filterType].has(checkbox.value);
+        });
+    }
+
+    function clearAllFilters() {
+        Object.keys(activeFilters).forEach(filterType => {
+            activeFilters[filterType].clear();
+            updateButtonText(filterType);
+        });
+        updateActiveFiltersDisplay();
+        loadData();
+    }
+
+    // Apply filters to data
+    function applyFilters(data) {
+        return data.filter(item => {
+            return Object.keys(activeFilters).every(filterType => {
+                const filterSet = activeFilters[filterType];
+                if (filterSet.size === 0) return true;
+
+                const config = filterConfigs[filterType];
+                let itemValue = item[config.field];
+
+                if (config.isArray && Array.isArray(itemValue)) {
+                    return itemValue.some(val => filterSet.has(val.toString()));
+                } else if (itemValue !== null && itemValue !== undefined) {
+                    return filterSet.has(itemValue.toString());
                 }
-            });
-        });
 
-        // Populate select elements
-        Object.keys(uniqueValues).forEach(filterId => {
-            const element = elements[filterId.replace(/-([a-z])/g, (g) => g[1].toUpperCase())];
-            if (element) {
-                const currentValue = element.value;
-                const values = [...uniqueValues[filterId]].sort();
-
-                element.innerHTML = `<option value="">${element.querySelector('option').textContent}</option>`;
-                values.forEach(value => {
-                    const option = document.createElement('option');
-                    option.value = value;
-                    option.textContent = value;
-                    element.appendChild(option);
-                });
-
-                element.value = currentValue; // Restore selection
-            }
-        });
-    }
-
-    // Simulate last encode/package dates
-    function getLastEncodeDate(item) {
-        if (item.premium_features && item.premium_features.some(f =>
-            f.toLowerCase().includes('encode') || f.toLowerCase().includes('encoded'))) {
-            const baseDate = item.updated_timestamp || Date.now();
-            return baseDate - (Math.random() * 7 * 24 * 60 * 60 * 1000);
-        }
-        return null;
-    }
-
-    function getLastPackageDate(item) {
-        if (item.premium_features && item.premium_features.some(f =>
-            f.toLowerCase().includes('repackage') || f.toLowerCase().includes('package'))) {
-            const baseDate = item.updated_timestamp || Date.now();
-            return baseDate - (Math.random() * 5 * 24 * 60 * 60 * 1000);
-        }
-        return null;
-    }
-
-    // Horizontal slider functionality
-    function initializeHorizontalSlider() {
-        elements.recordSlider.addEventListener('input', (e) => {
-            const value = parseInt(e.target.value);
-            updateSliderDisplay(value);
-
-            const itemsPerPage = 50;
-            const targetPage = Math.ceil(value / itemsPerPage);
-
-            if (targetPage !== currentPage && targetPage <= totalPages) {
-                currentPage = targetPage;
-                loadData();
-            }
-        });
-    }
-
-    function updateSliderDisplay(currentValue) {
-        elements.sliderValue.textContent = `${currentValue} / ${totalItems}`;
-    }
-
-    function updateSliderRange(total) {
-        totalItems = total;
-        elements.recordSlider.max = total;
-        elements.recordSlider.value = Math.min(parseInt(elements.recordSlider.value), total);
-        updateSliderDisplay(parseInt(elements.recordSlider.value));
-    }
-
-    // Column resizing functionality
-    function initializeColumnResizing() {
-        const headers = document.querySelectorAll('.media-table th.resizable');
-
-        headers.forEach(header => {
-            header.addEventListener('mousedown', handleMouseDown);
-        });
-
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
-    }
-
-    function handleMouseDown(e) {
-        const rect = e.target.getBoundingClientRect();
-        const isRightEdge = e.clientX >= rect.right - 10;
-
-        if (isRightEdge) {
-            e.preventDefault();
-            isResizing = true;
-            currentColumn = e.target;
-            startX = e.clientX;
-            startWidth = parseInt(window.getComputedStyle(currentColumn).width, 10);
-            currentColumn.classList.add('resizing');
-            document.body.style.cursor = 'col-resize';
-            elements.resizeLine.style.display = 'block';
-            elements.resizeLine.style.left = e.clientX + 'px';
-        }
-    }
-
-    function handleMouseMove(e) {
-        if (!isResizing) {
-            const target = e.target;
-            if (target.classList.contains('resizable')) {
-                const rect = target.getBoundingClientRect();
-                const isRightEdge = e.clientX >= rect.right - 10;
-                target.style.cursor = isRightEdge ? 'col-resize' : 'default';
-            }
-            return;
-        }
-
-        const width = startWidth + (e.clientX - startX);
-        if (width >= 60) {
-            currentColumn.style.width = width + 'px';
-            elements.resizeLine.style.left = e.clientX + 'px';
-        }
-    }
-
-    function handleMouseUp() {
-        if (isResizing) {
-            isResizing = false;
-            currentColumn.classList.remove('resizing');
-            currentColumn = null;
-            document.body.style.cursor = 'default';
-            elements.resizeLine.style.display = 'none';
-        }
-    }
-
-    // Toggle functionality
-    function initializeToggles() {
-        [elements.repackagedToggle, elements.cmafToggle].forEach(toggle => {
-            toggle.addEventListener('click', () => {
-                toggle.classList.toggle('active');
-                loadData();
+                return false;
             });
         });
     }
 
-    // CMAF Toggle functionality
-    function toggleCMAF(itemId, currentState) {
-        console.log(`Toggle CMAF for item ${itemId}: ${!currentState}`);
-
-        const checkbox = document.querySelector(`[data-item-id="${itemId}"] .cmaf-checkbox`);
-        const label = document.querySelector(`[data-item-id="${itemId}"] .cmaf-label`);
-
-        if (checkbox && label) {
-            const newState = !currentState;
-            checkbox.classList.toggle('checked', newState);
-            label.textContent = newState ? 'True' : 'False';
-            label.className = `cmaf-label ${newState ? 'cmaf-true' : 'cmaf-false'}`;
-        }
-    }
-
-    // Date formatting
-    function formatDate(timestamp) {
-        if (!timestamp) return 'N/A';
-        const date = new Date(parseInt(timestamp));
-        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-    }
-
-    // Feature tags rendering
-    function renderFeatureTags(features) {
-        if (!features || features.length === 0) return '';
-        return `<div class="feature-tags">${features.map(feature =>
-            `<span class="feature-tag">${feature}</span>`
-        ).join('')}</div>`;
-    }
-
-    // Streaming properties tags rendering
-    function renderStreamingPropertyTags(properties) {
-        if (!properties || properties.length === 0) return '<span class="date-na">N/A</span>';
-        return `<div class="streaming-property-tags">${properties.map(property =>
-            `<span class="streaming-property-tag">${property}</span>`
-        ).join('')}</div>`;
-    }
-
-    // Content type badge
-    function renderContentTypeBadge(type) {
-        if (!type) return '';
-        return `<span class="content-type-badge">${type}</span>`;
-    }
-
-    // Availability badge
-    function renderAvailabilityBadge(state) {
-        if (!state) return `<span class="availability-badge unknown">Unknown</span>`;
-        const className = state.toLowerCase().includes('available') ? 'available' :
-            state.toLowerCase().includes('unavailable') ? 'unavailable' : 'unknown';
-        return `<span class="availability-badge ${className}">${state}</span>`;
-    }
-
-    // CMAF toggle rendering
-    function renderCMAFToggle(itemId, features) {
-        const hasCMAF = features && features.some(f =>
-            f.toLowerCase().includes('cmaf') ||
-            f.toLowerCase().includes('dash') ||
-            f.toLowerCase().includes('hls')
-        );
-
-        return `
-                <div class="cmaf-toggle" data-item-id="${itemId}" onclick="toggleCMAF('${itemId}', ${hasCMAF})">
-                    <div class="cmaf-checkbox ${hasCMAF ? 'checked' : ''}"></div>
-                    <span class="cmaf-label ${hasCMAF ? 'cmaf-true' : 'cmaf-false'}">${hasCMAF ? 'True' : 'False'}</span>
-                </div>
-            `;
-    }
-
-    // Load and populate filter dropdowns
+    // Load filters data
     async function loadFilters() {
         try {
             const response = await fetch(`${API_BASE}/stats`);
@@ -1686,21 +1044,8 @@
 
             if (result.success) {
                 allStats = result.data;
-
-                elements.contentType.innerHTML = '<option value="">All Types</option>' +
-                    result.data.contentTypes.map(ct =>
-                        `<option value="${ct.content_type}">${ct.content_type} (${ct.count})</option>`
-                    ).join('');
-
-                elements.availability.innerHTML = '<option value="">All Availability</option>' +
-                    result.data.availabilityStates.map(as =>
-                        `<option value="${as.availability_state}">${as.availability_state} (${as.count})</option>`
-                    ).join('');
-
                 elements.totalItemsSpan.textContent = result.data.totalItems.toLocaleString();
                 elements.totalSeries.textContent = result.data.totalSeries.toLocaleString();
-
-                updateSliderRange(result.data.totalItems);
             }
         } catch (error) {
             console.error('Error loading filters:', error);
@@ -1717,76 +1062,10 @@
             params.append('search', elements.search.value.trim());
         }
 
-        if (elements.seriesFilter.value.trim()) {
-            params.append('series', elements.seriesFilter.value.trim());
-        }
-
-        if (elements.contentType.value) {
-            params.append('contentType', elements.contentType.value);
-        }
-
-        if (elements.availability.value) {
-            params.append('availability', elements.availability.value);
-        }
-
         params.append('sortBy', elements.sortBy.value);
         params.append('sortOrder', elements.sortOrder.value);
 
         return params;
-    }
-
-    // Apply column filters and multi-select filters
-    function applyClientSideFilters(data) {
-        let filteredData = [...data];
-
-        // Apply column filters
-        Object.keys(columnFilterMapping).forEach(filterId => {
-            const element = elements[filterId.replace(/-([a-z])/g, (g) => g[1].toUpperCase())];
-            const config = columnFilterMapping[filterId];
-
-            if (element && element.value) {
-                const filterValue = element.value.toLowerCase();
-
-                filteredData = filteredData.filter(item => {
-                    let itemValue = item[config.field];
-
-                    if (config.isArray && Array.isArray(itemValue)) {
-                        return itemValue.some(val =>
-                            val && val.toLowerCase().includes(filterValue)
-                        );
-                    } else if (config.isBoolean) {
-                        const hasCMAF = item.premium_features && item.premium_features.some(f =>
-                            f.toLowerCase().includes('cmaf') ||
-                            f.toLowerCase().includes('dash') ||
-                            f.toLowerCase().includes('hls')
-                        );
-                        return filterValue === 'true' ? hasCMAF : !hasCMAF;
-                    } else if (itemValue) {
-                        return itemValue.toString().toLowerCase().includes(filterValue);
-                    }
-                    return false;
-                });
-            }
-        });
-
-        // Apply multi-select filters
-        if (activeColumnFilter && activeMultiSelectValues.size > 0) {
-            const config = activeColumnFilter.filterConfig;
-            filteredData = filteredData.filter(item => {
-                let itemValue = item[config.field];
-
-                if (config.isArray && Array.isArray(itemValue)) {
-                    return itemValue.some(val =>
-                        activeMultiSelectValues.has(val)
-                    );
-                } else if (itemValue) {
-                    return activeMultiSelectValues.has(itemValue.toString());
-                }
-                return false;
-            });
-        }
-
-        return filteredData;
     }
 
     // Load media data
@@ -1810,13 +1089,11 @@
                 currentData = result.data;
 
                 // Apply client-side filters
-                const filteredData = applyClientSideFilters(result.data);
+                const filteredData = applyFilters(result.data);
 
                 renderMediaTable(filteredData);
                 updatePagination(result.pagination);
                 updateStats(filteredData.length);
-                updateSliderForCurrentPage();
-                populateColumnFilters();
 
                 elements.loading.style.display = 'none';
                 elements.tableWrapper.style.display = 'block';
@@ -1833,138 +1110,73 @@
         isLoading = false;
     }
 
-    function updateSliderForCurrentPage() {
-        const itemsPerPage = 50;
-        const startRecord = (currentPage - 1) * itemsPerPage + 1;
-        elements.recordSlider.value = startRecord;
-        updateSliderDisplay(startRecord);
-    }
-
     // Render media table
     function renderMediaTable(data) {
-        const repackagedOnly = elements.repackagedToggle.classList.contains('active');
-        const cmafOnly = elements.cmafToggle.classList.contains('active');
-        const encodedAfter = elements.encodedAfter.value ? new Date(elements.encodedAfter.value).getTime() : null;
-        const repackagedAfter = elements.repackagedAfter.value ? new Date(elements.repackagedAfter.value).getTime() : null;
-
-        let filteredData = data;
-
-        // Apply advanced filters
-        if (repackagedOnly || cmafOnly || encodedAfter || repackagedAfter) {
-            const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
-
-            filteredData = data.filter(item => {
-                const hasRepackaged = item.premium_features && item.premium_features.some(f =>
-                    f.toLowerCase().includes('repackage') || f.toLowerCase().includes('repackaged')
-                );
-                const hasCMAF = item.premium_features && item.premium_features.some(f =>
-                    f.toLowerCase().includes('cmaf') ||
-                    f.toLowerCase().includes('dash') ||
-                    f.toLowerCase().includes('hls')
-                );
-
-                if (repackagedOnly) {
-                    if (!hasRepackaged) return false;
-                    const lastPackageDate = getLastPackageDate(item);
-                    if (!lastPackageDate || lastPackageDate < sevenDaysAgo) return false;
-                }
-                if (cmafOnly && !hasCMAF) return false;
-
-                if (encodedAfter && (!item.updated_timestamp || item.updated_timestamp < encodedAfter)) return false;
-                if (repackagedAfter && (!item.added_timestamp || item.added_timestamp < repackagedAfter)) return false;
-
-                return true;
-            });
-        }
-
-        elements.mediaTbody.innerHTML = filteredData.map(item => {
+        elements.mediaTbody.innerHTML = data.map(item => {
             const title = item.title || 'N/A';
-            const series = item.series_title || '';
+            const series = item.series_title || 'N/A';
             const guid = item.guid || 'N/A';
-            const lastEncodeDate = getLastEncodeDate(item);
-            const lastPackageDate = getLastPackageDate(item);
 
             return `
-                    <tr>
-                        <td class="col-title">
-                            <div class="expandable-content" data-full="${title}">
-                                ${title.length > 50 ? title.substring(0, 47) + '...' : title}
-                            </div>
-                        </td>
-                        <td class="col-series">
-                            <div class="expandable-content" data-full="${series}">
-                                ${series.length > 40 ? series.substring(0, 37) + '...' : series}
-                            </div>
-                        </td>
-                        <td class="col-season-episode">
-                            ${item.season_number ? `S${item.season_number}` : ''}
-                            ${item.episode_number ? `E${item.episode_number}` : ''}
-                        </td>
-                        <td class="col-type">${renderContentTypeBadge(item.content_type)}</td>
-                        <td class="col-availability">${renderAvailabilityBadge(item.availability_state)}</td>
-                        <td class="col-features">${renderFeatureTags(item.premium_features)}</td>
-                        <td class="col-streaming-properties">${renderStreamingPropertyTags(item.streaming_properties)}</td>
-                        <td class="col-cmaf">${renderCMAFToggle(item.id, item.premium_features)}</td>
-                        <td class="col-updated date-display">${formatDate(item.updated_timestamp)}</td>
-                        <td class="col-added date-display">${formatDate(item.added_timestamp)}</td>
-                        <td class="col-last-encode date-display">
-                            ${lastEncodeDate ? formatDate(lastEncodeDate) : '<span class="date-na">N/A</span>'}
-                        </td>
-                        <td class="col-last-package date-display">
-                            ${lastPackageDate ? formatDate(lastPackageDate) : '<span class="date-na">N/A</span>'}
-                        </td>
-                        <td class="col-guid">${renderGUIDWithLink(guid)}</td>
-                    </tr>
-                `;
+                <tr>
+                    <td class="col-title" title="${title}">${title.length > 40 ? title.substring(0, 37) + '...' : title}</td>
+                    <td class="col-series" title="${series}">${series.length > 30 ? series.substring(0, 27) + '...' : series}</td>
+                    <td class="col-season-episode">
+                        ${item.season_number ? `S${item.season_number}` : ''}
+                        ${item.episode_number ? `E${item.episode_number}` : ''}
+                    </td>
+                    <td class="col-type">${renderContentTypeBadge(item.content_type)}</td>
+                    <td class="col-availability">${renderAvailabilityBadge(item.availability_state)}</td>
+                    <td class="col-features">${renderFeatureTags(item.premium_features)}</td>
+                    <td class="col-updated">${formatDate(item.updated_timestamp)}</td>
+                    <td class="col-guid" title="${guid}">${guid.length > 20 ? guid.substring(0, 17) + '...' : guid}</td>
+                </tr>
+            `;
         }).join('');
 
-        // Initialize expandable content
-        document.querySelectorAll('.expandable-content').forEach(element => {
-            const fullText = element.getAttribute('data-full');
-            const currentText = element.textContent;
-
-            if (fullText && fullText.length > currentText.length) {
-                const expandIcon = document.createElement('span');
-                expandIcon.className = 'expand-icon';
-                expandIcon.textContent = '+';
-                element.appendChild(expandIcon);
-
-                element.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const isExpanded = element.classList.contains('expanded');
-
-                    if (isExpanded) {
-                        element.classList.remove('expanded');
-                        element.firstChild.textContent = currentText;
-                        expandIcon.textContent = '+';
-                    } else {
-                        element.classList.add('expanded');
-                        element.firstChild.textContent = fullText;
-                        expandIcon.textContent = '−';
-                    }
-                });
-            }
-        });
-
-        if (filteredData.length === 0) {
+        if (data.length === 0) {
             elements.mediaTbody.innerHTML = `
-                    <tr>
-                        <td colspan="13" style="text-align: center; padding: 2rem; color: var(--text-muted);">
-                            No media items found matching the current filters.
-                        </td>
-                    </tr>
-                `;
+                <tr>
+                    <td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                        No media items found matching the current filters.
+                    </td>
+                </tr>
+            `;
         }
     }
 
-    // Update pagination
+    // Helper functions
+    function formatDate(timestamp) {
+        if (!timestamp) return 'N/A';
+        const date = new Date(parseInt(timestamp));
+        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    }
+
+    function renderFeatureTags(features) {
+        if (!features || features.length === 0) return '<span style="color: var(--text-muted);">N/A</span>';
+        return `<div class="feature-tags">${features.slice(0, 3).map(feature =>
+            `<span class="feature-tag">${feature}</span>`
+        ).join('')}${features.length > 3 ? '<span style="color: var(--text-muted); font-size: 0.7rem;">+' + (features.length - 3) + ' more</span>' : ''}</div>`;
+    }
+
+    function renderContentTypeBadge(type) {
+        if (!type) return '<span style="color: var(--text-muted);">N/A</span>';
+        return `<span class="content-type-badge">${type}</span>`;
+    }
+
+    function renderAvailabilityBadge(state) {
+        if (!state) return `<span class="availability-badge unknown">Unknown</span>`;
+        const className = state.toLowerCase().includes('available') ? 'available' :
+            state.toLowerCase().includes('unavailable') ? 'unavailable' : 'unknown';
+        return `<span class="availability-badge ${className}">${state}</span>`;
+    }
+
     function updatePagination(pagination) {
         elements.pageInfo.textContent = `Page ${pagination.currentPage} of ${pagination.totalPages}`;
         elements.prevBtn.disabled = !pagination.hasPrev;
         elements.nextBtn.disabled = !pagination.hasNext;
     }
 
-    // Update stats
     function updateStats(filteredCount) {
         elements.filteredItems.textContent = filteredCount.toLocaleString();
 
@@ -1972,43 +1184,23 @@
             const encodedFeature = allStats.premiumFeatures.find(f =>
                 f.feature && f.feature.toLowerCase().includes('encode')
             );
-            const repackagedFeature = allStats.premiumFeatures.find(f =>
-                f.feature && f.feature.toLowerCase().includes('repackage')
-            );
-            const cmafFeature = allStats.premiumFeatures.find(f =>
-                f.feature && (f.feature.toLowerCase().includes('cmaf') ||
-                    f.feature.toLowerCase().includes('dash') ||
-                    f.feature.toLowerCase().includes('hls'))
-            );
-
             elements.encodedCount.textContent = encodedFeature ? encodedFeature.count.toLocaleString() : '0';
-            elements.repackagedCount.textContent = repackagedFeature ? repackagedFeature.count.toLocaleString() : '0';
-            elements.cmafCount.textContent = cmafFeature ? cmafFeature.count.toLocaleString() : '0';
         }
     }
 
     // Event listeners
     function setupEventListeners() {
-        [elements.search, elements.seriesFilter].forEach(input => {
-            let timeout;
-            input.addEventListener('input', () => {
-                clearTimeout(timeout);
-                timeout = setTimeout(() => {
-                    currentPage = 1;
-                    loadData();
-                }, 500);
-            });
-        });
-
-        [elements.contentType, elements.availability, elements.sortBy, elements.sortOrder].forEach(select => {
-            select.addEventListener('change', () => {
+        let searchTimeout;
+        elements.search.addEventListener('input', () => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
                 currentPage = 1;
                 loadData();
-            });
+            }, 500);
         });
 
-        [elements.encodedAfter, elements.repackagedAfter].forEach(input => {
-            input.addEventListener('change', () => {
+        [elements.sortBy, elements.sortOrder].forEach(select => {
+            select.addEventListener('change', () => {
                 currentPage = 1;
                 loadData();
             });
@@ -2031,22 +1223,15 @@
 
     // Initialize dashboard
     async function initialize() {
-        initializeToggles();
-        initializeColumnResizing();
-        initializeHorizontalSlider();
         initializeMultiSelect();
-        initializeColumnFilters();
         setupEventListeners();
+        updateActiveFiltersDisplay();
         await loadFilters();
         await loadData();
     }
 
     // Start the dashboard
     initialize();
-
-    // Make functions globally available for onclick handlers
-    window.toggleCMAF = toggleCMAF;
-    window.copyToClipboard = copyToClipboard;
 </script>
 </body>
 </html>
