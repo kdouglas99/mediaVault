@@ -13,6 +13,8 @@
             --text: #ffffff;
             --text-muted: rgba(255,255,255,0.75);
             --border: #1f2937;
+            --border-light: #374151;
+            --text-dark: #1f2937;
             --primary: #60a5fa;
             --primary-hover: #3b82f6;
             --accent: #34d399;
@@ -39,7 +41,7 @@
         }
 
         .container {
-            max-width: 1400px;
+            max-width: 1600px;
             margin: 0 auto;
         }
 
@@ -98,6 +100,209 @@
             box-shadow: var(--focus);
             border-color: var(--primary);
             background: color-mix(in oklab, var(--surface-2), var(--primary) 6%);
+        }
+
+        /* Column Filter Section */
+        .column-filters {
+            background: var(--surface-2);
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .column-filters h3 {
+            margin: 0 0 1rem 0;
+            font-size: 1rem;
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .column-filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .column-filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .column-filter-group label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .column-filter-group select {
+            padding: 0.5rem;
+            font-size: 0.85rem;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 6px;
+        }
+
+        /* Multi-Select Filter Section */
+        .multi-select-filters {
+            background: var(--surface-2);
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .multi-select-filters h3 {
+            margin: 0 0 1rem 0;
+            font-size: 1rem;
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .active-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .filter-chip {
+            background: var(--primary);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .filter-chip .remove-chip {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 12px;
+            line-height: 1;
+        }
+
+        .filter-chip .remove-chip:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .multi-select-container {
+            position: relative;
+            display: inline-block;
+            min-width: 250px;
+        }
+
+        .multi-select-button {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 0.75rem;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            font-size: 0.9rem;
+        }
+
+        .multi-select-button:hover {
+            border-color: var(--primary);
+        }
+
+        .multi-select-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            z-index: 1000;
+            max-height: 250px;
+            display: none;
+        }
+
+        .multi-select-dropdown.open {
+            display: block;
+        }
+
+        .multi-select-search {
+            position: sticky;
+            top: 0;
+            background: var(--surface-2);
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .multi-select-search input {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            color: var(--text);
+            border-radius: 6px;
+            font-size: 0.85rem;
+        }
+
+        .multi-select-search input:focus {
+            outline: none;
+            box-shadow: var(--focus);
+            border-color: var(--primary);
+        }
+
+        .multi-select-options {
+            max-height: 180px;
+            overflow-y: auto;
+        }
+
+        .multi-select-option {
+            padding: 0.5rem 0.75rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .multi-select-option:last-child {
+            border-bottom: none;
+        }
+
+        .multi-select-option:hover {
+            background: var(--surface-2);
+        }
+
+        .multi-select-option.hidden {
+            display: none;
+        }
+
+        .multi-select-option input[type="checkbox"] {
+            margin: 0;
+            accent-color: var(--primary);
+        }
+
+        .no-results {
+            padding: 1rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-style: italic;
+            font-size: 0.85rem;
         }
 
         .toggle-controls {
@@ -281,7 +486,7 @@
             width: 100%;
             border-collapse: collapse;
             table-layout: fixed;
-            min-width: 1400px;
+            min-width: 1600px;
         }
 
         .media-table th {
@@ -335,6 +540,7 @@
         .col-type { width: 120px; }
         .col-availability { width: 140px; }
         .col-features { width: 200px; }
+        .col-streaming-properties { width: 200px; }
         .col-cmaf { width: 100px; }
         .col-updated { width: 160px; }
         .col-added { width: 160px; }
@@ -463,6 +669,23 @@
         .feature-tag {
             background: var(--primary);
             color: white;
+            padding: 0.15rem 0.4rem;
+            border-radius: 999px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.1px;
+            white-space: nowrap;
+        }
+
+        .streaming-property-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+        }
+
+        .streaming-property-tag {
+            background: var(--warning);
+            color: var(--text-dark);
             padding: 0.15rem 0.4rem;
             border-radius: 999px;
             font-size: 0.7rem;
@@ -620,6 +843,10 @@
                 grid-template-columns: 1fr;
             }
 
+            .column-filter-grid {
+                grid-template-columns: 1fr;
+            }
+
             .toggle-controls {
                 flex-direction: column;
                 align-items: stretch;
@@ -689,6 +916,92 @@
                     <option value="ASC">Ascending</option>
                     <option value="DESC">Descending</option>
                 </select>
+            </div>
+        </div>
+
+        <!-- Column Filters -->
+        <div class="column-filters">
+            <h3>📋 Column Filters</h3>
+            <div class="column-filter-grid">
+                <div class="column-filter-group">
+                    <label>Title</label>
+                    <select id="title-filter">
+                        <option value="">All Titles</option>
+                    </select>
+                </div>
+                <div class="column-filter-group">
+                    <label>Series</label>
+                    <select id="series-column-filter">
+                        <option value="">All Series</option>
+                    </select>
+                </div>
+                <div class="column-filter-group">
+                    <label>Season</label>
+                    <select id="season-filter">
+                        <option value="">All Seasons</option>
+                    </select>
+                </div>
+                <div class="column-filter-group">
+                    <label>Episode</label>
+                    <select id="episode-filter">
+                        <option value="">All Episodes</option>
+                    </select>
+                </div>
+                <div class="column-filter-group">
+                    <label>Content Type</label>
+                    <select id="content-type-column-filter">
+                        <option value="">All Types</option>
+                    </select>
+                </div>
+                <div class="column-filter-group">
+                    <label>Availability</label>
+                    <select id="availability-column-filter">
+                        <option value="">All States</option>
+                    </select>
+                </div>
+                <div class="column-filter-group">
+                    <label>Features</label>
+                    <select id="features-filter">
+                        <option value="">Select Feature...</option>
+                    </select>
+                </div>
+                <div class="column-filter-group">
+                    <label>Streaming Properties</label>
+                    <select id="streaming-properties-filter">
+                        <option value="">Select Property...</option>
+                    </select>
+                </div>
+                <div class="column-filter-group">
+                    <label>CMAF</label>
+                    <select id="cmaf-column-filter">
+                        <option value="">All CMAF</option>
+                        <option value="true">CMAF Enabled</option>
+                        <option value="false">CMAF Disabled</option>
+                    </select>
+                </div>
+                <div class="column-filter-group">
+                    <label>GUID</label>
+                    <select id="guid-filter">
+                        <option value="">All GUIDs</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Multi-Select Filters -->
+        <div class="multi-select-filters" id="multi-select-section" style="display: none;">
+            <h3>🔍 Multi-Value Filter</h3>
+            <div class="active-filters" id="active-filters">
+                <!-- Filter chips will appear here -->
+            </div>
+            <div class="multi-select-container">
+                <button class="multi-select-button" id="multi-select-button">
+                    <span id="multi-select-text">Select values...</span>
+                    <span>▼</span>
+                </button>
+                <div class="multi-select-dropdown" id="multi-select-dropdown">
+                    <!-- Options will be populated here -->
+                </div>
             </div>
         </div>
 
@@ -765,6 +1078,7 @@
                     <th class="resizable col-type" data-column="type">Type</th>
                     <th class="resizable col-availability" data-column="availability">Availability</th>
                     <th class="resizable col-features" data-column="features">Features</th>
+                    <th class="resizable col-streaming-properties" data-column="streaming-properties">Streaming Properties</th>
                     <th class="resizable col-cmaf" data-column="cmaf">CMAF</th>
                     <th class="resizable col-updated" data-column="updated">Updated</th>
                     <th class="resizable col-added" data-column="added">Added</th>
@@ -797,6 +1111,9 @@
     let isLoading = false;
     let allStats = {};
     let currentData = [];
+    let allColumnData = {};
+    let activeColumnFilter = null;
+    let activeMultiSelectValues = new Set();
 
     // Column resizing variables
     let isResizing = false;
@@ -833,7 +1150,40 @@
         cmafCount: document.getElementById('cmaf-count'),
         resizeLine: document.getElementById('resize-line'),
         recordSlider: document.getElementById('record-slider'),
-        sliderValue: document.getElementById('slider-value')
+        sliderValue: document.getElementById('slider-value'),
+
+        // Column filters
+        titleFilter: document.getElementById('title-filter'),
+        seriesColumnFilter: document.getElementById('series-column-filter'),
+        seasonFilter: document.getElementById('season-filter'),
+        episodeFilter: document.getElementById('episode-filter'),
+        contentTypeColumnFilter: document.getElementById('content-type-column-filter'),
+        availabilityColumnFilter: document.getElementById('availability-column-filter'),
+        featuresFilter: document.getElementById('features-filter'),
+        streamingPropertiesFilter: document.getElementById('streaming-properties-filter'),
+        cmafColumnFilter: document.getElementById('cmaf-column-filter'),
+        guidFilter: document.getElementById('guid-filter'),
+
+        // Multi-select elements
+        multiSelectSection: document.getElementById('multi-select-section'),
+        multiSelectButton: document.getElementById('multi-select-button'),
+        multiSelectText: document.getElementById('multi-select-text'),
+        multiSelectDropdown: document.getElementById('multi-select-dropdown'),
+        activeFilters: document.getElementById('active-filters')
+    };
+
+    // Column filter mapping
+    const columnFilterMapping = {
+        'title-filter': { field: 'title', label: 'Title' },
+        'series-column-filter': { field: 'series_title', label: 'Series' },
+        'season-filter': { field: 'season_number', label: 'Season' },
+        'episode-filter': { field: 'episode_number', label: 'Episode' },
+        'content-type-column-filter': { field: 'content_type', label: 'Content Type' },
+        'availability-column-filter': { field: 'availability_state', label: 'Availability' },
+        'features-filter': { field: 'premium_features', label: 'Features', isArray: true },
+        'streaming-properties-filter': { field: 'streaming_properties', label: 'Streaming Properties', isArray: true },
+        'cmaf-column-filter': { field: 'cmaf', label: 'CMAF', isBoolean: true },
+        'guid-filter': { field: 'guid', label: 'GUID' }
     };
 
     // Deep linking functionality
@@ -866,7 +1216,6 @@
     // Copy to clipboard functionality
     function copyToClipboard(text) {
         navigator.clipboard.writeText(text).then(() => {
-            // Show temporary success feedback
             const btn = event.target;
             const originalText = btn.textContent;
             btn.textContent = '✓';
@@ -880,25 +1229,289 @@
         });
     }
 
-    // Simulate last encode/package dates (in real implementation, these would come from API)
+    // Multi-select functionality with search
+    function initializeMultiSelect() {
+        elements.multiSelectButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isOpen = elements.multiSelectDropdown.classList.contains('open');
+            elements.multiSelectDropdown.classList.toggle('open');
+            
+            if (!isOpen) {
+                // Focus search input when dropdown opens
+                const searchInput = elements.multiSelectDropdown.querySelector('.multi-select-search input');
+                if (searchInput) {
+                    setTimeout(() => searchInput.focus(), 100);
+                }
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!elements.multiSelectDropdown.contains(e.target) && e.target !== elements.multiSelectButton) {
+                elements.multiSelectDropdown.classList.remove('open');
+            }
+        });
+    }
+
+    function populateMultiSelectOptions(values, filterConfig) {
+        elements.multiSelectDropdown.innerHTML = '';
+
+        // Add search input
+        const searchContainer = document.createElement('div');
+        searchContainer.className = 'multi-select-search';
+        
+        const searchInput = document.createElement('input');
+        searchInput.type = 'text';
+        searchInput.placeholder = 'Search options...';
+        searchInput.addEventListener('input', (e) => {
+            filterMultiSelectOptions(e.target.value);
+        });
+        
+        // Prevent dropdown from closing when typing
+        searchInput.addEventListener('click', (e) => e.stopPropagation());
+        
+        searchContainer.appendChild(searchInput);
+        elements.multiSelectDropdown.appendChild(searchContainer);
+
+        // Add options container
+        const optionsContainer = document.createElement('div');
+        optionsContainer.className = 'multi-select-options';
+        
+        const sortedValues = [...values].sort();
+
+        sortedValues.forEach(value => {
+            const option = document.createElement('div');
+            option.className = 'multi-select-option';
+            option.setAttribute('data-value', value.toLowerCase());
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = value;
+            checkbox.checked = activeMultiSelectValues.has(value);
+
+            checkbox.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    activeMultiSelectValues.add(value);
+                } else {
+                    activeMultiSelectValues.delete(value);
+                }
+                updateActiveFilters();
+                loadData();
+            });
+
+            const label = document.createElement('span');
+            label.textContent = value;
+
+            option.appendChild(checkbox);
+            option.appendChild(label);
+            optionsContainer.appendChild(option);
+        });
+
+        elements.multiSelectDropdown.appendChild(optionsContainer);
+        
+        // Add no results message (initially hidden)
+        const noResults = document.createElement('div');
+        noResults.className = 'no-results';
+        noResults.textContent = 'No options found';
+        noResults.style.display = 'none';
+        elements.multiSelectDropdown.appendChild(noResults);
+    }
+
+    function filterMultiSelectOptions(searchTerm) {
+        const options = elements.multiSelectDropdown.querySelectorAll('.multi-select-option');
+        const noResults = elements.multiSelectDropdown.querySelector('.no-results');
+        const searchLower = searchTerm.toLowerCase();
+        let visibleCount = 0;
+
+        options.forEach(option => {
+            const value = option.getAttribute('data-value');
+            const isVisible = value.includes(searchLower) || option.querySelector('span').textContent.toLowerCase().includes(searchLower);
+            
+            if (isVisible) {
+                option.classList.remove('hidden');
+                visibleCount++;
+            } else {
+                option.classList.add('hidden');
+            }
+        });
+
+        // Show/hide no results message
+        if (visibleCount === 0 && searchTerm.trim() !== '') {
+            noResults.style.display = 'block';
+        } else {
+            noResults.style.display = 'none';
+        }
+    }
+
+    function updateActiveFilters() {
+        elements.activeFilters.innerHTML = '';
+
+        activeMultiSelectValues.forEach(value => {
+            const chip = document.createElement('div');
+            chip.className = 'filter-chip';
+
+            const text = document.createElement('span');
+            text.textContent = value;
+
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'remove-chip';
+            removeBtn.textContent = '×';
+            removeBtn.onclick = () => {
+                activeMultiSelectValues.delete(value);
+                updateActiveFilters();
+                updateMultiSelectCheckboxes();
+                loadData();
+            };
+
+            chip.appendChild(text);
+            chip.appendChild(removeBtn);
+            elements.activeFilters.appendChild(chip);
+        });
+
+        // Update button text
+        const count = activeMultiSelectValues.size;
+        if (count === 0) {
+            elements.multiSelectText.textContent = 'Select values...';
+        } else {
+            elements.multiSelectText.textContent = `${count} value${count > 1 ? 's' : ''} selected`;
+        }
+    }
+
+    function updateMultiSelectCheckboxes() {
+        const checkboxes = elements.multiSelectDropdown.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = activeMultiSelectValues.has(checkbox.value);
+        });
+    }
+
+    // Column filter functionality
+    function initializeColumnFilters() {
+        Object.keys(columnFilterMapping).forEach(filterId => {
+            const element = elements[filterId.replace(/-([a-z])/g, (g) => g[1].toUpperCase())];
+            if (element) {
+                element.addEventListener('change', (e) => {
+                    handleColumnFilterChange(filterId, e.target.value);
+                });
+            }
+        });
+    }
+
+    function handleColumnFilterChange(filterId, value) {
+        const filterConfig = columnFilterMapping[filterId];
+
+        if (value && !filterConfig.isBoolean) {
+            // Show multi-select section
+            activeColumnFilter = { filterId, filterConfig, baseValue: value };
+            elements.multiSelectSection.style.display = 'block';
+
+            // Clear previous selections
+            activeMultiSelectValues.clear();
+
+            // Get unique values for this column and base filter
+            const uniqueValues = getUniqueValuesForFilter(filterConfig, value);
+            populateMultiSelectOptions(uniqueValues, filterConfig);
+            updateActiveFilters();
+
+            // Update section title
+            elements.multiSelectSection.querySelector('h3').textContent =
+                `🔍 Multi-Value Filter: ${filterConfig.label} (${uniqueValues.size} options)`;
+        } else {
+            // Hide multi-select section if no column filter is active
+            if (!value) {
+                activeColumnFilter = null;
+                activeMultiSelectValues.clear();
+                elements.multiSelectSection.style.display = 'none';
+                updateActiveFilters();
+            }
+        }
+
+        loadData();
+    }
+
+    function getUniqueValuesForFilter(filterConfig, baseValue) {
+        const values = new Set();
+
+        currentData.forEach(item => {
+            let itemValue = item[filterConfig.field];
+
+            if (filterConfig.isArray && Array.isArray(itemValue)) {
+                itemValue.forEach(val => {
+                    if (val && val.toLowerCase().includes(baseValue.toLowerCase())) {
+                        values.add(val);
+                    }
+                });
+            } else if (itemValue && itemValue.toString().toLowerCase().includes(baseValue.toLowerCase())) {
+                values.add(itemValue.toString());
+            }
+        });
+
+        return values;
+    }
+
+    function populateColumnFilters() {
+        // Populate all column filters with unique values from current data
+        const uniqueValues = {};
+
+        // Initialize sets for each filter
+        Object.keys(columnFilterMapping).forEach(filterId => {
+            const config = columnFilterMapping[filterId];
+            if (!config.isBoolean) {
+                uniqueValues[filterId] = new Set();
+            }
+        });
+
+        // Collect unique values
+        currentData.forEach(item => {
+            Object.keys(columnFilterMapping).forEach(filterId => {
+                const config = columnFilterMapping[filterId];
+                if (config.isBoolean) return;
+
+                let value = item[config.field];
+
+                if (config.isArray && Array.isArray(value)) {
+                    value.forEach(v => {
+                        if (v) uniqueValues[filterId].add(v);
+                    });
+                } else if (value) {
+                    uniqueValues[filterId].add(value.toString());
+                }
+            });
+        });
+
+        // Populate select elements
+        Object.keys(uniqueValues).forEach(filterId => {
+            const element = elements[filterId.replace(/-([a-z])/g, (g) => g[1].toUpperCase())];
+            if (element) {
+                const currentValue = element.value;
+                const values = [...uniqueValues[filterId]].sort();
+
+                element.innerHTML = `<option value="">${element.querySelector('option').textContent}</option>`;
+                values.forEach(value => {
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = value;
+                    element.appendChild(option);
+                });
+
+                element.value = currentValue; // Restore selection
+            }
+        });
+    }
+
+    // Simulate last encode/package dates
     function getLastEncodeDate(item) {
-        // This would come from your actual API data
-        // For demo purposes, generating a date based on updated_timestamp
         if (item.premium_features && item.premium_features.some(f =>
             f.toLowerCase().includes('encode') || f.toLowerCase().includes('encoded'))) {
             const baseDate = item.updated_timestamp || Date.now();
-            return baseDate - (Math.random() * 7 * 24 * 60 * 60 * 1000); // Random date within last week
+            return baseDate - (Math.random() * 7 * 24 * 60 * 60 * 1000);
         }
         return null;
     }
 
     function getLastPackageDate(item) {
-        // This would come from your actual API data
-        // For demo purposes, generating a date based on updated_timestamp
         if (item.premium_features && item.premium_features.some(f =>
             f.toLowerCase().includes('repackage') || f.toLowerCase().includes('package'))) {
             const baseDate = item.updated_timestamp || Date.now();
-            return baseDate - (Math.random() * 5 * 24 * 60 * 60 * 1000); // Random date within last 5 days
+            return baseDate - (Math.random() * 5 * 24 * 60 * 60 * 1000);
         }
         return null;
     }
@@ -909,7 +1522,6 @@
             const value = parseInt(e.target.value);
             updateSliderDisplay(value);
 
-            // Calculate which page this record would be on (assuming 50 items per page)
             const itemsPerPage = 50;
             const targetPage = Math.ceil(value / itemsPerPage);
 
@@ -962,7 +1574,6 @@
 
     function handleMouseMove(e) {
         if (!isResizing) {
-            // Show resize cursor when hovering over right edge
             const target = e.target;
             if (target.classList.contains('resizable')) {
                 const rect = target.getBoundingClientRect();
@@ -973,7 +1584,7 @@
         }
 
         const width = startWidth + (e.clientX - startX);
-        if (width >= 60) { // Minimum column width
+        if (width >= 60) {
             currentColumn.style.width = width + 'px';
             elements.resizeLine.style.left = e.clientX + 'px';
         }
@@ -1001,10 +1612,8 @@
 
     // CMAF Toggle functionality
     function toggleCMAF(itemId, currentState) {
-        // In a real implementation, this would make an API call to update the database
         console.log(`Toggle CMAF for item ${itemId}: ${!currentState}`);
 
-        // For demo purposes, we'll just toggle the visual state
         const checkbox = document.querySelector(`[data-item-id="${itemId}"] .cmaf-checkbox`);
         const label = document.querySelector(`[data-item-id="${itemId}"] .cmaf-label`);
 
@@ -1013,33 +1622,6 @@
             checkbox.classList.toggle('checked', newState);
             label.textContent = newState ? 'True' : 'False';
             label.className = `cmaf-label ${newState ? 'cmaf-true' : 'cmaf-false'}`;
-        }
-    }
-
-    // Cell expansion functionality
-    function makeContentExpandable(cellContent, originalText) {
-        if (originalText && originalText.length > 50) {
-            const expandIcon = document.createElement('span');
-            expandIcon.className = 'expand-icon';
-            expandIcon.textContent = '+';
-
-            cellContent.classList.add('expandable-content');
-            cellContent.appendChild(expandIcon);
-
-            cellContent.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const isExpanded = cellContent.classList.contains('expanded');
-
-                if (isExpanded) {
-                    cellContent.classList.remove('expanded');
-                    cellContent.firstChild.textContent = originalText.substring(0, 47) + '...';
-                    expandIcon.textContent = '+';
-                } else {
-                    cellContent.classList.add('expanded');
-                    cellContent.firstChild.textContent = originalText;
-                    expandIcon.textContent = '−';
-                }
-            });
         }
     }
 
@@ -1055,6 +1637,14 @@
         if (!features || features.length === 0) return '';
         return `<div class="feature-tags">${features.map(feature =>
             `<span class="feature-tag">${feature}</span>`
+        ).join('')}</div>`;
+    }
+
+    // Streaming properties tags rendering
+    function renderStreamingPropertyTags(properties) {
+        if (!properties || properties.length === 0) return '<span class="date-na">N/A</span>';
+        return `<div class="streaming-property-tags">${properties.map(property =>
+            `<span class="streaming-property-tag">${property}</span>`
         ).join('')}</div>`;
     }
 
@@ -1074,7 +1664,6 @@
 
     // CMAF toggle rendering
     function renderCMAFToggle(itemId, features) {
-        // Check if item has CMAF encoding based on features
         const hasCMAF = features && features.some(f =>
             f.toLowerCase().includes('cmaf') ||
             f.toLowerCase().includes('dash') ||
@@ -1098,23 +1687,19 @@
             if (result.success) {
                 allStats = result.data;
 
-                // Populate content types
                 elements.contentType.innerHTML = '<option value="">All Types</option>' +
                     result.data.contentTypes.map(ct =>
                         `<option value="${ct.content_type}">${ct.content_type} (${ct.count})</option>`
                     ).join('');
 
-                // Populate availability states
                 elements.availability.innerHTML = '<option value="">All Availability</option>' +
                     result.data.availabilityStates.map(as =>
                         `<option value="${as.availability_state}">${as.availability_state} (${as.count})</option>`
                     ).join('');
 
-                // Update stats
                 elements.totalItemsSpan.textContent = result.data.totalItems.toLocaleString();
                 elements.totalSeries.textContent = result.data.totalSeries.toLocaleString();
 
-                // Update slider range
                 updateSliderRange(result.data.totalItems);
             }
         } catch (error) {
@@ -1150,6 +1735,60 @@
         return params;
     }
 
+    // Apply column filters and multi-select filters
+    function applyClientSideFilters(data) {
+        let filteredData = [...data];
+
+        // Apply column filters
+        Object.keys(columnFilterMapping).forEach(filterId => {
+            const element = elements[filterId.replace(/-([a-z])/g, (g) => g[1].toUpperCase())];
+            const config = columnFilterMapping[filterId];
+
+            if (element && element.value) {
+                const filterValue = element.value.toLowerCase();
+
+                filteredData = filteredData.filter(item => {
+                    let itemValue = item[config.field];
+
+                    if (config.isArray && Array.isArray(itemValue)) {
+                        return itemValue.some(val =>
+                            val && val.toLowerCase().includes(filterValue)
+                        );
+                    } else if (config.isBoolean) {
+                        const hasCMAF = item.premium_features && item.premium_features.some(f =>
+                            f.toLowerCase().includes('cmaf') ||
+                            f.toLowerCase().includes('dash') ||
+                            f.toLowerCase().includes('hls')
+                        );
+                        return filterValue === 'true' ? hasCMAF : !hasCMAF;
+                    } else if (itemValue) {
+                        return itemValue.toString().toLowerCase().includes(filterValue);
+                    }
+                    return false;
+                });
+            }
+        });
+
+        // Apply multi-select filters
+        if (activeColumnFilter && activeMultiSelectValues.size > 0) {
+            const config = activeColumnFilter.filterConfig;
+            filteredData = filteredData.filter(item => {
+                let itemValue = item[config.field];
+
+                if (config.isArray && Array.isArray(itemValue)) {
+                    return itemValue.some(val =>
+                        activeMultiSelectValues.has(val)
+                    );
+                } else if (itemValue) {
+                    return activeMultiSelectValues.has(itemValue.toString());
+                }
+                return false;
+            });
+        }
+
+        return filteredData;
+    }
+
     // Load media data
     async function loadData() {
         if (isLoading) return;
@@ -1170,10 +1809,14 @@
                 currentPage = result.pagination.currentPage;
                 currentData = result.data;
 
-                renderMediaTable(result.data);
+                // Apply client-side filters
+                const filteredData = applyClientSideFilters(result.data);
+
+                renderMediaTable(filteredData);
                 updatePagination(result.pagination);
-                updateStats(result.pagination.totalItems);
+                updateStats(filteredData.length);
                 updateSliderForCurrentPage();
+                populateColumnFilters();
 
                 elements.loading.style.display = 'none';
                 elements.tableWrapper.style.display = 'block';
@@ -1191,7 +1834,6 @@
     }
 
     function updateSliderForCurrentPage() {
-        // Update slider position based on current page
         const itemsPerPage = 50;
         const startRecord = (currentPage - 1) * itemsPerPage + 1;
         elements.recordSlider.value = startRecord;
@@ -1209,7 +1851,7 @@
 
         // Apply advanced filters
         if (repackagedOnly || cmafOnly || encodedAfter || repackagedAfter) {
-            const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000); // 7 days in milliseconds
+            const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
 
             filteredData = data.filter(item => {
                 const hasRepackaged = item.premium_features && item.premium_features.some(f =>
@@ -1222,7 +1864,6 @@
                 );
 
                 if (repackagedOnly) {
-                    // Check if item has repackaged feature AND was repackaged in last 7 days
                     if (!hasRepackaged) return false;
                     const lastPackageDate = getLastPackageDate(item);
                     if (!lastPackageDate || lastPackageDate < sevenDaysAgo) return false;
@@ -1262,6 +1903,7 @@
                         <td class="col-type">${renderContentTypeBadge(item.content_type)}</td>
                         <td class="col-availability">${renderAvailabilityBadge(item.availability_state)}</td>
                         <td class="col-features">${renderFeatureTags(item.premium_features)}</td>
+                        <td class="col-streaming-properties">${renderStreamingPropertyTags(item.streaming_properties)}</td>
                         <td class="col-cmaf">${renderCMAFToggle(item.id, item.premium_features)}</td>
                         <td class="col-updated date-display">${formatDate(item.updated_timestamp)}</td>
                         <td class="col-added date-display">${formatDate(item.added_timestamp)}</td>
@@ -1307,7 +1949,7 @@
         if (filteredData.length === 0) {
             elements.mediaTbody.innerHTML = `
                     <tr>
-                        <td colspan="12" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                        <td colspan="13" style="text-align: center; padding: 2rem; color: var(--text-muted);">
                             No media items found matching the current filters.
                         </td>
                     </tr>
@@ -1326,7 +1968,6 @@
     function updateStats(filteredCount) {
         elements.filteredItems.textContent = filteredCount.toLocaleString();
 
-        // Calculate encoded/repackaged/CMAF counts
         if (allStats.premiumFeatures) {
             const encodedFeature = allStats.premiumFeatures.find(f =>
                 f.feature && f.feature.toLowerCase().includes('encode')
@@ -1348,7 +1989,6 @@
 
     // Event listeners
     function setupEventListeners() {
-        // Search and filter inputs
         [elements.search, elements.seriesFilter].forEach(input => {
             let timeout;
             input.addEventListener('input', () => {
@@ -1360,7 +2000,6 @@
             });
         });
 
-        // Select filters
         [elements.contentType, elements.availability, elements.sortBy, elements.sortOrder].forEach(select => {
             select.addEventListener('change', () => {
                 currentPage = 1;
@@ -1368,7 +2007,6 @@
             });
         });
 
-        // Date filters
         [elements.encodedAfter, elements.repackagedAfter].forEach(input => {
             input.addEventListener('change', () => {
                 currentPage = 1;
@@ -1376,7 +2014,6 @@
             });
         });
 
-        // Pagination
         elements.prevBtn.addEventListener('click', () => {
             if (currentPage > 1) {
                 currentPage--;
@@ -1397,6 +2034,8 @@
         initializeToggles();
         initializeColumnResizing();
         initializeHorizontalSlider();
+        initializeMultiSelect();
+        initializeColumnFilters();
         setupEventListeners();
         await loadFilters();
         await loadData();
