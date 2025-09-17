@@ -384,41 +384,47 @@
             border-radius: 4px;
         }
 
-        .field-old::before {
-            content: '− ';
-            font-weight: bold;
-        }
-
-        .field-new::before {
-            content: '+ ';
-            font-weight: bold;
-        }
-
         .pagination {
             display: flex;
-            justify-content: center;
+            justify-content: space-between;
             align-items: center;
-            gap: 1rem;
             padding: 1.5rem;
             background: var(--surface-2);
+            border-top: 1px solid var(--border);
         }
 
-        .pagination button {
+        .pagination-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .pagination-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .pagination-controls button {
             background: var(--primary);
             color: white;
             border: none;
-            padding: 0.5rem 1rem;
+            padding: 0.6rem 1.2rem;
             border-radius: 6px;
             cursor: pointer;
             font-weight: 600;
-            transition: background 0.2s ease;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+            min-width: 100px;
         }
 
-        .pagination button:hover:not(:disabled) {
+        .pagination-controls button:hover:not(:disabled) {
             background: var(--primary-hover);
         }
 
-        .pagination button:disabled {
+        .pagination-controls button:disabled {
             background: #6b7280;
             cursor: not-allowed;
             opacity: 0.7;
@@ -441,13 +447,13 @@
 
         .empty-state {
             text-align: center;
-            padding: 3rem;
+            padding: 4rem 2rem;
             color: var(--text-muted);
         }
 
         .empty-state h3 {
             color: var(--text);
-            margin-bottom: 1rem;
+            margin-bottom: 0.5rem;
         }
 
         @media (max-width: 768px) {
@@ -455,32 +461,38 @@
                 grid-template-columns: 1fr;
             }
 
-            .timeline-item {
+            .stats-bar {
                 flex-direction: column;
-                align-items: flex-start;
+                gap: 1rem;
             }
 
-            .timeline-marker {
-                margin-bottom: 1rem;
-                margin-right: 0;
+            .pagination {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .pagination-controls {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .pagination-controls button {
+                width: 100%;
+            }
+
+            .timeline-item {
+                flex-direction: column;
+                margin-left: 0;
             }
 
             .timeline-item::before {
-                left: 24px;
-                top: 48px;
+                display: none;
             }
 
-            .change-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .header {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-
-            .nav-links {
-                flex-wrap: wrap;
+            .timeline-marker {
+                margin-right: 0;
+                margin-bottom: 1rem;
+                align-self: flex-start;
             }
         }
     </style>
@@ -488,468 +500,457 @@
 <body>
 <div class="container">
     <div class="header">
-        <h1>📋 History Admin</h1>
+        <h1>📚 History Admin</h1>
         <div class="nav-links">
-            <a href="/" class="nav-link">🏠 Main App</a>
-            <a href="/dashboard.html" class="nav-link">📊 Dashboard</a>
+            <a href="dashboard.html" class="nav-link">📊 Dashboard</a>
+            <a href="/" class="nav-link">🏠 Home</a>
         </div>
     </div>
 
     <div class="history-controls">
         <div class="controls-grid">
             <div class="control-group">
-                <label for="date-from">From Date</label>
-                <input type="datetime-local" id="date-from">
+                <label for="search">🔍 Search Events</label>
+                <input type="text" id="search" placeholder="Search by action, user, or target...">
             </div>
 
             <div class="control-group">
-                <label for="date-to">To Date</label>
-                <input type="datetime-local" id="date-to">
-            </div>
-
-            <div class="control-group">
-                <label for="action-filter">Action Type</label>
-                <select id="action-filter">
-                    <option value="">All Actions</option>
-                    <option value="create">Create</option>
-                    <option value="update">Update</option>
-                    <option value="delete">Delete</option>
-                    <option value="toggle">Toggle</option>
-                    <option value="import">Import</option>
+                <label for="type-filter">📋 Event Type</label>
+                <select id="type-filter">
+                    <option value="">All Events</option>
+                    <option value="CREATE">Create</option>
+                    <option value="UPDATE">Update</option>
+                    <option value="DELETE">Delete</option>
+                    <option value="IMPORT">Import</option>
+                    <option value="EXPORT">Export</option>
                 </select>
             </div>
 
             <div class="control-group">
-                <label for="user-filter">User</label>
+                <label for="user-filter">👤 User</label>
                 <select id="user-filter">
                     <option value="">All Users</option>
                 </select>
             </div>
 
             <div class="control-group">
-                <label for="entity-filter">Entity Type</label>
-                <select id="entity-filter">
-                    <option value="">All Entities</option>
-                    <option value="media_item">Media Item</option>
-                    <option value="user_preference">User Preference</option>
-                    <option value="system_setting">System Setting</option>
-                </select>
+                <label for="date-from">📅 From Date</label>
+                <input type="date" id="date-from">
             </div>
 
             <div class="control-group">
-                <label for="search-changes">Search Changes</label>
-                <input type="text" id="search-changes" placeholder="Search in change descriptions...">
+                <label for="date-to">📅 To Date</label>
+                <input type="date" id="date-to">
+            </div>
+
+            <div class="control-group">
+                <label for="items-per-page">📄 Items per Page</label>
+                <select id="items-per-page">
+                    <option value="20">20</option>
+                    <option value="50" selected>50</option>
+                    <option value="100">100</option>
+                </select>
             </div>
         </div>
 
         <div class="action-buttons">
-            <button class="btn btn-primary" id="refresh-btn">🔄 Refresh</button>
-            <button class="btn btn-secondary" id="export-btn">📥 Export History</button>
-            <button class="btn btn-danger" id="clear-filters-btn">🗑️ Clear Filters</button>
-            <div style="flex: 1;"></div>
-            <span id="auto-refresh-status" class="timeline-time">Auto-refresh: OFF</span>
-            <label class="toggle-switch">
-                <input type="checkbox" id="auto-refresh-toggle">
-                <span class="slider"></span>
-            </label>
+            <button class="btn btn-primary" id="refresh-history">🔄 Refresh</button>
+            <button class="btn btn-secondary" id="clear-filters">🗑️ Clear Filters</button>
+            <button class="btn btn-secondary" id="export-history">📊 Export History</button>
         </div>
     </div>
 
+    <!-- Stats Bar -->
     <div class="stats-bar">
         <div class="stat-item">
-            <span class="stat-number" id="total-changes">0</span>
-            <span class="stat-label">Total Changes</span>
+            <span class="stat-number" id="total-events">0</span>
+            <span class="stat-label">Total Events</span>
         </div>
         <div class="stat-item">
-            <span class="stat-number" id="today-changes">0</span>
-            <span class="stat-label">Today</span>
+            <span class="stat-number" id="filtered-events">0</span>
+            <span class="stat-label">Filtered Results</span>
         </div>
         <div class="stat-item">
-            <span class="stat-number" id="week-changes">0</span>
-            <span class="stat-label">This Week</span>
-        </div>
-        <div class="stat-item">
-            <span class="stat-number" id="active-users">0</span>
+            <span class="stat-number" id="unique-users">0</span>
             <span class="stat-label">Active Users</span>
         </div>
         <div class="stat-item">
-            <span class="stat-number" id="most-changed">-</span>
-            <span class="stat-label">Most Changed Entity</span>
+            <span class="stat-number" id="today-events">0</span>
+            <span class="stat-label">Today's Events</span>
         </div>
     </div>
 
+    <!-- History Container -->
     <div class="history-container">
-        <div class="loading" id="loading">Loading history data...</div>
+        <div class="loading" id="loading">Loading history...</div>
         <div class="error" id="error" style="display: none;"></div>
 
         <div class="timeline" id="timeline" style="display: none;">
             <!-- Timeline items will be populated here -->
         </div>
 
+        <div class="empty-state" id="empty-state" style="display: none;">
+            <h3>📭 No History Found</h3>
+            <p>No events found matching your current filters.</p>
+        </div>
+
         <div class="pagination" id="pagination" style="display: none;">
-            <button id="prev-btn">Previous</button>
-            <span id="page-info">Page 1 of 1</span>
-            <button id="next-btn">Next</button>
+            <div class="pagination-info">
+                <div id="pagination-main">Page 1 of 1</div>
+                <div id="pagination-details">Showing 0 to 0 of 0 entries</div>
+            </div>
+
+            <div class="pagination-controls">
+                <button id="prev-btn">« Previous</button>
+                <button id="next-btn">Next »</button>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-    const API_BASE = window.APP_CONFIG.API_BASE;
-
+    // Global variables
+    let API_BASE = '';
     let currentPage = 1;
     let totalPages = 1;
+    let totalItems = 0;
+    let itemsPerPage = 50;
     let isLoading = false;
-    let autoRefreshInterval = null;
+    let historyData = [];
+    let filteredData = [];
 
     // DOM Elements
     const elements = {
         loading: document.getElementById('loading'),
         error: document.getElementById('error'),
         timeline: document.getElementById('timeline'),
+        emptyState: document.getElementById('empty-state'),
         pagination: document.getElementById('pagination'),
+        search: document.getElementById('search'),
+        typeFilter: document.getElementById('type-filter'),
+        userFilter: document.getElementById('user-filter'),
         dateFrom: document.getElementById('date-from'),
         dateTo: document.getElementById('date-to'),
-        actionFilter: document.getElementById('action-filter'),
-        userFilter: document.getElementById('user-filter'),
-        entityFilter: document.getElementById('entity-filter'),
-        searchChanges: document.getElementById('search-changes'),
-        refreshBtn: document.getElementById('refresh-btn'),
-        exportBtn: document.getElementById('export-btn'),
-        clearFiltersBtn: document.getElementById('clear-filters-btn'),
-        autoRefreshToggle: document.getElementById('auto-refresh-toggle'),
-        autoRefreshStatus: document.getElementById('auto-refresh-status'),
+        itemsPerPage: document.getElementById('items-per-page'),
+        refreshBtn: document.getElementById('refresh-history'),
+        clearFiltersBtn: document.getElementById('clear-filters'),
+        exportBtn: document.getElementById('export-history'),
+        totalEvents: document.getElementById('total-events'),
+        filteredEvents: document.getElementById('filtered-events'),
+        uniqueUsers: document.getElementById('unique-users'),
+        todayEvents: document.getElementById('today-events'),
+        paginationMain: document.getElementById('pagination-main'),
+        paginationDetails: document.getElementById('pagination-details'),
         prevBtn: document.getElementById('prev-btn'),
-        nextBtn: document.getElementById('next-btn'),
-        pageInfo: document.getElementById('page-info'),
-        totalChanges: document.getElementById('total-changes'),
-        todayChanges: document.getElementById('today-changes'),
-        weekChanges: document.getElementById('week-changes'),
-        activeUsers: document.getElementById('active-users'),
-        mostChanged: document.getElementById('most-changed')
+        nextBtn: document.getElementById('next-btn')
     };
 
-    // Mock data generator (in real implementation, this would come from API)
-    function generateMockHistoryData() {
-        const actions = ['create', 'update', 'delete', 'toggle', 'import'];
-        const users = ['admin', 'editor', 'viewer', 'system'];
-        const entities = ['media_item', 'user_preference', 'system_setting'];
-
-        const data = [];
-        const now = new Date();
-
-        for (let i = 0; i < 50; i++) {
-            const action = actions[Math.floor(Math.random() * actions.length)];
-            const user = users[Math.floor(Math.random() * users.length)];
-            const entity = entities[Math.floor(Math.random() * entities.length)];
-
-            const timestamp = new Date(now - Math.random() * 7 * 24 * 60 * 60 * 1000);
-
-            const changes = {};
-            if (action === 'update') {
-                changes['title'] = {
-                    old: 'Old Movie Title ' + i,
-                    new: 'New Movie Title ' + i
-                };
-                changes['cmaf_encoded'] = {
-                    old: false,
-                    new: true
-                };
+    // Load configuration from backend
+    async function loadConfig() {
+        try {
+            // Try to get config from current origin first
+            const response = await fetch('/api/config');
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success) {
+                    API_BASE = result.config.API_BASE;
+                    console.log('Loaded API_BASE from config:', API_BASE);
+                    return;
+                }
             }
-
-            data.push({
-                id: i + 1,
-                action: action,
-                entity_type: entity,
-                entity_id: Math.floor(Math.random() * 1000) + 1,
-                user: user,
-                timestamp: timestamp.getTime(),
-                description: `${action.charAt(0).toUpperCase() + action.slice(1)} ${entity.replace('_', ' ')} #${Math.floor(Math.random() * 1000) + 1}`,
-                changes: changes,
-                ip_address: `192.168.1.${Math.floor(Math.random() * 255)}`,
-                user_agent: 'Mozilla/5.0 (compatible; MediaVault/1.0)'
-            });
+        } catch (error) {
+            console.warn('Failed to load config from current origin, trying localhost:', error.message);
         }
 
-        return data.sort((a, b) => b.timestamp - a.timestamp);
+        // Fallback to localhost for development
+        try {
+            const response = await fetch('http://localhost:3001/api/config');
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success) {
+                    API_BASE = result.config.API_BASE;
+                    console.log('Loaded API_BASE from localhost config:', API_BASE);
+                    return;
+                }
+            }
+        } catch (error) {
+            console.warn('Failed to load config from localhost:', error.message);
+        }
+
+        // Final fallback
+        API_BASE = 'http://localhost:3001/api';
+        console.log('Using fallback API_BASE:', API_BASE);
     }
 
-    // Format timestamp
-    function formatTimestamp(timestamp) {
-        const date = new Date(timestamp);
-        const now = new Date();
-        const diff = now - date;
-
-        if (diff < 60000) { // Less than 1 minute
-            return 'Just now';
-        } else if (diff < 3600000) { // Less than 1 hour
-            return `${Math.floor(diff / 60000)} minutes ago`;
-        } else if (diff < 86400000) { // Less than 1 day
-            return `${Math.floor(diff / 3600000)} hours ago`;
-        } else {
-            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
-        }
-    }
-
-    // Get action icon
-    function getActionIcon(action) {
-        const icons = {
-            'create': '➕',
-            'update': '✏️',
-            'delete': '🗑️',
-            'toggle': '🔄',
-            'import': '📥'
-        };
-        return icons[action] || '❓';
-    }
-
-    // Render change details
-    function renderChangeDetails(changes) {
-        if (!changes || Object.keys(changes).length === 0) {
-            return '';
-        }
-
-        const changeFields = Object.entries(changes).map(([field, change]) => `
-                <div class="change-field">
-                    <div class="field-name">${field.replace('_', ' ')}</div>
-                    <div class="field-change">
-                        <div class="field-old">${change.old}</div>
-                        <div class="field-new">${change.new}</div>
-                    </div>
-                </div>
-            `).join('');
-
-        return `
-                <div class="change-details">
-                    <div class="change-grid">
-                        ${changeFields}
-                    </div>
-                </div>
-            `;
-    }
-
-    // Render timeline
-    function renderTimeline(data) {
-        if (data.length === 0) {
-            elements.timeline.innerHTML = `
-                    <div class="empty-state">
-                        <h3>No History Found</h3>
-                        <p>No changes match your current filters.</p>
-                    </div>
-                `;
-            return;
-        }
-
-        elements.timeline.innerHTML = data.map(item => `
-                <div class="timeline-item">
-                    <div class="timeline-marker ${item.action}">
-                        ${getActionIcon(item.action)}
-                    </div>
-                    <div class="timeline-content">
-                        <div class="timeline-header">
-                            <h3 class="timeline-title">${item.description}</h3>
-                            <div class="timeline-meta">
-                                <div class="timeline-time">${formatTimestamp(item.timestamp)}</div>
-                                <div class="timeline-user">${item.user}</div>
-                            </div>
-                        </div>
-                        <div class="timeline-description">
-                            ${item.action.charAt(0).toUpperCase() + item.action.slice(1)} operation on ${item.entity_type.replace('_', ' ')} #${item.entity_id}
-                            <br><strong>IP:</strong> ${item.ip_address}
-                        </div>
-                        ${renderChangeDetails(item.changes)}
-                    </div>
-                </div>
-            `).join('');
-    }
-
-    // Apply filters to data
-    function applyFilters(data) {
-        let filtered = [...data];
-
-        // Date filters
-        if (elements.dateFrom.value) {
-            const fromDate = new Date(elements.dateFrom.value).getTime();
-            filtered = filtered.filter(item => item.timestamp >= fromDate);
-        }
-
-        if (elements.dateTo.value) {
-            const toDate = new Date(elements.dateTo.value).getTime();
-            filtered = filtered.filter(item => item.timestamp <= toDate);
-        }
-
-        // Action filter
-        if (elements.actionFilter.value) {
-            filtered = filtered.filter(item => item.action === elements.actionFilter.value);
-        }
-
-        // User filter
-        if (elements.userFilter.value) {
-            filtered = filtered.filter(item => item.user === elements.userFilter.value);
-        }
-
-        // Entity filter
-        if (elements.entityFilter.value) {
-            filtered = filtered.filter(item => item.entity_type === elements.entityFilter.value);
-        }
-
-        // Search filter
-        if (elements.searchChanges.value) {
-            const searchTerm = elements.searchChanges.value.toLowerCase();
-            filtered = filtered.filter(item =>
-                item.description.toLowerCase().includes(searchTerm) ||
-                JSON.stringify(item.changes).toLowerCase().includes(searchTerm)
-            );
-        }
-
-        return filtered;
-    }
-
-    // Update stats
-    function updateStats(data) {
-        const now = new Date();
-        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-        const weekStart = new Date(now - 7 * 24 * 60 * 60 * 1000).getTime();
-
-        const todayChanges = data.filter(item => item.timestamp >= todayStart).length;
-        const weekChanges = data.filter(item => item.timestamp >= weekStart).length;
-        const activeUsers = [...new Set(data.filter(item => item.timestamp >= weekStart).map(item => item.user))].length;
-
-        // Find most changed entity type
-        const entityCounts = {};
-        data.forEach(item => {
-            entityCounts[item.entity_type] = (entityCounts[item.entity_type] || 0) + 1;
-        });
-        const mostChanged = Object.entries(entityCounts).sort(([,a], [,b]) => b - a)[0];
-
-        elements.totalChanges.textContent = data.length.toLocaleString();
-        elements.todayChanges.textContent = todayChanges.toLocaleString();
-        elements.weekChanges.textContent = weekChanges.toLocaleString();
-        elements.activeUsers.textContent = activeUsers.toLocaleString();
-        elements.mostChanged.textContent = mostChanged ? mostChanged[0].replace('_', ' ') : '-';
-    }
-
-    // Load history data
-    function loadHistory() {
+    // Load history data from API
+    async function loadHistory() {
         if (isLoading) return;
 
         isLoading = true;
-        elements.loading.style.display = 'block';
-        elements.error.style.display = 'none';
-        elements.timeline.style.display = 'none';
-        elements.pagination.style.display = 'none';
+        showLoading(true);
+        hideError();
 
-        // In real implementation, this would be an API call
-        setTimeout(() => {
-            try {
-                const allData = generateMockHistoryData();
-                const filteredData = applyFilters(allData);
+        try {
+            const params = buildQueryParams();
+            const response = await fetch(`${API_BASE}/history?${params}`);
 
-                // Pagination
-                const itemsPerPage = 10;
-                const startIndex = (currentPage - 1) * itemsPerPage;
-                const endIndex = startIndex + itemsPerPage;
-                const pageData = filteredData.slice(startIndex, endIndex);
-
-                totalPages = Math.ceil(filteredData.length / itemsPerPage);
-
-                renderTimeline(pageData);
-                updateStats(allData);
-                updatePagination();
-                populateUserFilter(allData);
-
-                elements.loading.style.display = 'none';
-                elements.timeline.style.display = 'block';
-                elements.pagination.style.display = 'flex';
-            } catch (error) {
-                elements.loading.style.display = 'none';
-                elements.error.style.display = 'block';
-                elements.error.textContent = 'Error loading history: ' + error.message;
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            isLoading = false;
-        }, 1000);
+            const result = await response.json();
+
+            if (result.success) {
+                historyData = result.data || [];
+                totalItems = result.totalItems || 0;
+                totalPages = result.totalPages || 1;
+                currentPage = result.currentPage || 1;
+
+                renderHistoryTimeline();
+                updatePagination();
+                updateStats();
+                showContent();
+            } else {
+                throw new Error(result.error || 'Failed to load history');
+            }
+        } catch (error) {
+            console.error('History loading error:', error);
+            showError('Failed to load history: ' + error.message);
+        }
+
+        isLoading = false;
+        showLoading(false);
     }
 
-    // Populate user filter dropdown
-    function populateUserFilter(data) {
-        const users = [...new Set(data.map(item => item.user))].sort();
-        elements.userFilter.innerHTML = '<option value="">All Users</option>' +
-            users.map(user => `<option value="${user}">${user}</option>`).join('');
+    // Build query parameters for API request
+    function buildQueryParams() {
+        const params = new URLSearchParams();
+
+        params.append('page', currentPage.toString());
+        params.append('limit', itemsPerPage.toString());
+
+        if (elements.search.value.trim()) {
+            params.append('search', elements.search.value.trim());
+        }
+
+        if (elements.typeFilter.value) {
+            params.append('type', elements.typeFilter.value);
+        }
+
+        if (elements.userFilter.value) {
+            params.append('user', elements.userFilter.value);
+        }
+
+        if (elements.dateFrom.value) {
+            params.append('dateFrom', elements.dateFrom.value);
+        }
+
+        if (elements.dateTo.value) {
+            params.append('dateTo', elements.dateTo.value);
+        }
+
+        return params;
     }
 
-    // Update pagination
+    // Show/hide loading state
+    function showLoading(show) {
+        elements.loading.style.display = show ? 'block' : 'none';
+        elements.timeline.style.display = show ? 'none' : 'block';
+        elements.pagination.style.display = show ? 'none' : 'flex';
+        elements.emptyState.style.display = 'none';
+    }
+
+    // Show/hide error message
+    function showError(message) {
+        elements.error.textContent = message;
+        elements.error.style.display = 'block';
+        elements.timeline.style.display = 'none';
+        elements.pagination.style.display = 'none';
+        elements.emptyState.style.display = 'none';
+    }
+
+    function hideError() {
+        elements.error.style.display = 'none';
+    }
+
+    // Show main content (timeline and pagination)
+    function showContent() {
+        elements.timeline.style.display = 'block';
+        elements.pagination.style.display = 'flex';
+        elements.error.style.display = 'none';
+
+        if (historyData.length === 0) {
+            elements.emptyState.style.display = 'block';
+            elements.timeline.style.display = 'none';
+            elements.pagination.style.display = 'none';
+        } else {
+            elements.emptyState.style.display = 'none';
+        }
+    }
+
+    // Render the history timeline
+    function renderHistoryTimeline() {
+        if (!Array.isArray(historyData) || historyData.length === 0) {
+            elements.timeline.innerHTML = '';
+            return;
+        }
+
+        elements.timeline.innerHTML = historyData.map(item => {
+            const eventType = (item.action || 'unknown').toLowerCase();
+            const icon = getEventIcon(eventType);
+            const timestamp = new Date(item.timestamp || Date.now());
+            const timeStr = timestamp.toLocaleString();
+            const user = item.user || 'System';
+
+            let description = item.description || 'No description available';
+            let changes = '';
+
+            // If there are changes, render them
+            if (item.changes && Object.keys(item.changes).length > 0) {
+                changes = `
+                    <div class="change-details">
+                        <div class="change-grid">
+                            ${Object.entries(item.changes).map(([field, change]) => `
+                                <div class="change-field">
+                                    <div class="field-name">${field}</div>
+                                    <div class="field-change">
+                                        ${change.old !== undefined ? `<div class="field-old">- ${formatValue(change.old)}</div>` : ''}
+                                        ${change.new !== undefined ? `<div class="field-new">+ ${formatValue(change.new)}</div>` : ''}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="timeline-item">
+                    <div class="timeline-marker ${eventType}">
+                        ${icon}
+                    </div>
+                    <div class="timeline-content">
+                        <div class="timeline-header">
+                            <h3 class="timeline-title">${item.title || item.action || 'Unknown Event'}</h3>
+                            <div class="timeline-meta">
+                                <div class="timeline-time">${timeStr}</div>
+                                <div class="timeline-user">${user}</div>
+                            </div>
+                        </div>
+                        <div class="timeline-description">${description}</div>
+                        ${changes}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Get icon for event type
+    function getEventIcon(eventType) {
+        const icons = {
+            create: '➕',
+            update: '📝',
+            delete: '🗑️',
+            import: '📥',
+            export: '📤',
+            toggle: '🔄',
+            unknown: '❓'
+        };
+        return icons[eventType] || icons.unknown;
+    }
+
+    // Format values for display
+    function formatValue(value) {
+        if (value === null || value === undefined) {
+            return 'null';
+        }
+        if (typeof value === 'object') {
+            return JSON.stringify(value, null, 2);
+        }
+        return String(value);
+    }
+
+    // Update pagination controls
     function updatePagination() {
-        elements.pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+        const startItem = (currentPage - 1) * itemsPerPage + 1;
+        const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+
+        elements.paginationMain.textContent = `Page ${currentPage} of ${totalPages}`;
+        elements.paginationDetails.textContent = `Showing ${startItem.toLocaleString()} to ${endItem.toLocaleString()} of ${totalItems.toLocaleString()} entries`;
+
         elements.prevBtn.disabled = currentPage <= 1;
         elements.nextBtn.disabled = currentPage >= totalPages;
     }
 
-    // Auto refresh functionality
-    function toggleAutoRefresh() {
-        if (elements.autoRefreshToggle.checked) {
-            autoRefreshInterval = setInterval(loadHistory, 30000); // 30 seconds
-            elements.autoRefreshStatus.textContent = 'Auto-refresh: ON (30s)';
-        } else {
-            clearInterval(autoRefreshInterval);
-            autoRefreshInterval = null;
-            elements.autoRefreshStatus.textContent = 'Auto-refresh: OFF';
-        }
+    // Update statistics
+    function updateStats() {
+        elements.totalEvents.textContent = totalItems.toLocaleString();
+        elements.filteredEvents.textContent = historyData.length.toLocaleString();
+
+        // Calculate unique users and today's events from current data
+        const uniqueUsersSet = new Set(historyData.map(item => item.user).filter(Boolean));
+        elements.uniqueUsers.textContent = uniqueUsersSet.size.toString();
+
+        const today = new Date().toDateString();
+        const todayEventsCount = historyData.filter(item => {
+            const itemDate = new Date(item.timestamp || 0).toDateString();
+            return itemDate === today;
+        }).length;
+        elements.todayEvents.textContent = todayEventsCount.toString();
     }
 
-    // Export history
-    function exportHistory() {
-        // In real implementation, this would make an API call to export data
-        const data = generateMockHistoryData();
-        const filteredData = applyFilters(data);
-
-        const csv = [
-            ['Timestamp', 'Action', 'Entity Type', 'Entity ID', 'User', 'Description', 'IP Address'],
-            ...filteredData.map(item => [
-                new Date(item.timestamp).toISOString(),
-                item.action,
-                item.entity_type,
-                item.entity_id,
-                item.user,
-                item.description,
-                item.ip_address
-            ])
-        ].map(row => row.join(',')).join('\n');
-
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `history_export_${new Date().toISOString().split('T')[0]}.csv`;
-        a.click();
-        window.URL.revokeObjectURL(url);
-    }
-
-    // Clear filters
+    // Clear all filters
     function clearFilters() {
+        elements.search.value = '';
+        elements.typeFilter.value = '';
+        elements.userFilter.value = '';
         elements.dateFrom.value = '';
         elements.dateTo.value = '';
-        elements.actionFilter.value = '';
-        elements.userFilter.value = '';
-        elements.entityFilter.value = '';
-        elements.searchChanges.value = '';
         currentPage = 1;
         loadHistory();
     }
 
-    // Setup event listeners
-    function setupEventListeners() {
-        // Filter inputs
-        [elements.dateFrom, elements.dateTo, elements.actionFilter, elements.userFilter, elements.entityFilter].forEach(input => {
-            input.addEventListener('change', () => {
-                currentPage = 1;
-                loadHistory();
-            });
-        });
+    // Export history data
+    async function exportHistory() {
+        try {
+            elements.exportBtn.disabled = true;
+            elements.exportBtn.textContent = '🔄 Exporting...';
 
-        // Search input with debounce
+            // Get all data (not just current page)
+            const params = buildQueryParams();
+            params.delete('page');
+            params.delete('limit');
+
+            const response = await fetch(`${API_BASE}/history/export?${params}`);
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = `history-export-${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (error) {
+            console.error('Export error:', error);
+            alert('Export failed: ' + error.message);
+        } finally {
+            elements.exportBtn.disabled = false;
+            elements.exportBtn.textContent = '📊 Export History';
+        }
+    }
+
+    // Event listeners
+    function setupEventListeners() {
+        // Search with debounce
         let searchTimeout;
-        elements.searchChanges.addEventListener('input', () => {
+        elements.search.addEventListener('input', () => {
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
                 currentPage = 1;
@@ -957,11 +958,20 @@
             }, 500);
         });
 
-        // Action buttons
-        elements.refreshBtn.addEventListener('click', loadHistory);
-        elements.exportBtn.addEventListener('click', exportHistory);
-        elements.clearFiltersBtn.addEventListener('click', clearFilters);
-        elements.autoRefreshToggle.addEventListener('change', toggleAutoRefresh);
+        // Filter changes
+        [elements.typeFilter, elements.userFilter, elements.dateFrom, elements.dateTo].forEach(element => {
+            element.addEventListener('change', () => {
+                currentPage = 1;
+                loadHistory();
+            });
+        });
+
+        // Items per page
+        elements.itemsPerPage.addEventListener('change', () => {
+            itemsPerPage = parseInt(elements.itemsPerPage.value);
+            currentPage = 1;
+            loadHistory();
+        });
 
         // Pagination
         elements.prevBtn.addEventListener('click', () => {
@@ -977,16 +987,55 @@
                 loadHistory();
             }
         });
+
+        // Action buttons
+        elements.refreshBtn.addEventListener('click', () => loadHistory());
+        elements.clearFiltersBtn.addEventListener('click', clearFilters);
+        elements.exportBtn.addEventListener('click', exportHistory);
     }
 
-    // Initialize
-    function initialize() {
-        setupEventListeners();
-        loadHistory();
+    // Load users for filter dropdown
+    async function loadUsers() {
+        try {
+            const response = await fetch(`${API_BASE}/users`);
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success && Array.isArray(result.data)) {
+                    result.data.forEach(user => {
+                        const option = document.createElement('option');
+                        option.value = user.id || user.name || user;
+                        option.textContent = user.name || user.email || user;
+                        elements.userFilter.appendChild(option);
+                    });
+                }
+            }
+        } catch (error) {
+            console.warn('Failed to load users:', error);
+        }
     }
 
-    // Start the history admin
-    initialize();
+    // Initialize the application
+    async function initializeHistory() {
+        try {
+            // Load configuration first
+            await loadConfig();
+
+            // Set up event listeners
+            setupEventListeners();
+
+            // Load users for filter
+            await loadUsers();
+
+            // Load initial history data
+            await loadHistory();
+        } catch (error) {
+            console.error('Failed to initialize history:', error);
+            showError('Failed to initialize application: ' + error.message);
+        }
+    }
+
+    // Start the application
+    initializeHistory();
 </script>
 </body>
 </html>

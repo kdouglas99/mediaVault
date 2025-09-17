@@ -1074,14 +1074,13 @@
 <div class="resize-line" id="resize-line"></div>
 
 <script>
-    const API_BASE = window.APP_CONFIG.API_BASE;
-
-    // Updated global variables for client-side approach
+    // Global variables
+    let API_BASE = '';
     let currentPage = 1;
     let totalPages = 1;
     let totalItems = 0;
     let isLoading = false;
-    let allData = []; // Store ALL data from server
+    let allData = [];
     let filteredData = []; // Data after applying filters
     let displayedData = []; // Data currently displayed (paginated)
     let allStats = {};
@@ -2136,8 +2135,45 @@
         }
     }
 
-    // Initialize dashboard
+    // Load configuration first
+    async function loadConfig() {
+        try {
+            // Try to get config from current origin first
+            const response = await fetch('/api/config');
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success) {
+                    API_BASE = result.config.API_BASE;
+                    return;
+                }
+            }
+        } catch (error) {
+            console.warn('Failed to load config from current origin, trying localhost');
+        }
+        
+        // Fallback to localhost for development
+        try {
+            const response = await fetch('http://localhost:3001/api/config');
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success) {
+                    API_BASE = result.config.API_BASE;
+                    return;
+                }
+            }
+        } catch (error) {
+            console.warn('Failed to load config from localhost');
+        }
+        
+        // Final fallback
+        API_BASE = 'http://localhost:3001/api';
+    }
+
+    // Updated initialize function
     async function initialize() {
+        // Load configuration first
+        await loadConfig();
+        
         initializeColumnResizing();
         initializeColumnSorting();
         initializeMultiSelect();

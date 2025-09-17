@@ -89,6 +89,16 @@ app.get('/health', rateLimit(), (req, res) => {
     res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
+// Add this new endpoint to serve frontend configuration
+app.get('/api/config', rateLimit(), (req, res) => {
+    res.json({
+        success: true,
+        config: {
+            API_BASE: `${req.protocol}://${req.get('host')}/api`
+        }
+    });
+});
+
 // Database connection test
 app.get('/api/test', rateLimit(), async (req, res) => {
     let client;
