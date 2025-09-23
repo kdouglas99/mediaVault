@@ -1,12 +1,12 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Media Vault Dashboard</title>
+    <!-- Suppress noisy extension-originated console errors (e.g., background-redux-new.js) -->
+    <script src="/js/ignore-extension-errors.js"></script>
     <style>
-        /* Design tokens */
         :root {
             --bg: #0f172a;
             --surface: #111827;
@@ -15,21 +15,17 @@
             --text-muted: rgba(255,255,255,0.75);
             --border: #1f2937;
             --border-light: #374151;
-            --text-dark: #1f2937;
             --primary: #60a5fa;
             --primary-hover: #3b82f6;
             --accent: #34d399;
             --accent-hover: #10b981;
             --danger: #f87171;
             --danger-hover: #ef4444;
-            --warning: #fbbf24;
             --shadow: 0 10px 30px rgba(0,0,0,0.35);
             --radius: 12px;
             --focus: 0 0 0 3px rgba(96,165,250,0.35);
         }
-
         * { box-sizing: border-box; }
-
         body {
             margin: 0;
             background: radial-gradient(1200px 600px at 10% -10%, rgba(59,130,246,0.10), rgba(0,0,0,0) 40%),
@@ -40,812 +36,294 @@
             min-height: 100vh;
             padding: 2rem 1.25rem;
         }
-
-        .container {
-            max-width: 1600px;
-            margin: 0 auto;
-        }
-
+        .container { max-width: 1600px; margin: 0 auto; }
         h1 {
             text-align: center;
             font-size: clamp(1.6rem, 2.4vw, 2.25rem);
-            font-weight: 800;
-            letter-spacing: 0.2px;
-            color: var(--text);
-            text-shadow: 0 1px 0 rgba(0,0,0,0.15);
+            font-weight: 800; letter-spacing: 0.2px;
             margin-bottom: 2rem;
         }
-
         .dashboard-controls {
             background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02)), var(--surface);
             border: 1px solid var(--border);
             border-radius: var(--radius);
-            padding: 1.5rem;
-            margin-bottom: 2rem;
+            padding: 1.5rem; margin-bottom: 2rem;
             box-shadow: var(--shadow);
         }
-
         .controls-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1.5rem;
+            gap: 1rem; margin-bottom: 1.5rem;
         }
-
-        .control-group {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        .control-group label {
-            font-weight: 600;
-            color: var(--text);
-            font-size: 0.9rem;
-        }
-
-        .control-group input,
-        .control-group select {
-            padding: 0.75rem;
-            border: 1px solid var(--border);
-            background: var(--surface-2);
-            color: var(--text);
-            border-radius: 8px;
-            font-size: 0.9rem;
+        .control-group { display: flex; flex-direction: column; gap: 0.5rem; }
+        .control-group label { font-weight: 600; font-size: 0.9rem; }
+        .control-group input, .control-group select {
+            padding: 0.75rem; border: 1px solid var(--border);
+            background: var(--surface-2); color: var(--text);
+            border-radius: 8px; font-size: 0.9rem;
             transition: border-color 0.2s ease, background 0.2s ease;
         }
-
-        .control-group input:focus,
-        .control-group select:focus {
-            outline: none;
-            box-shadow: var(--focus);
+        .control-group input:focus, .control-group select:focus {
+            outline: none; box-shadow: var(--focus);
             border-color: var(--primary);
             background: color-mix(in oklab, var(--surface-2), var(--primary) 6%);
         }
 
-        /* Multi-Select Filters */
         .multi-select-filters {
             background: var(--surface-2);
             border: 1px solid var(--border-light);
-            border-radius: 8px;
-            padding: 1.5rem;
-            margin-bottom: 1rem;
+            border-radius: 8px; padding: 1.5rem; margin-bottom: 1rem;
         }
-
         .multi-select-filters h3 {
-            margin: 0 0 1.5rem 0;
-            font-size: 1.1rem;
-            color: var(--text);
-            font-weight: 600;
-            text-align: center;
+            margin: 0 0 1.5rem 0; font-size: 1.1rem; font-weight: 600; text-align: center;
         }
-
         .filters-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1.5rem;
+            gap: 1rem; margin-bottom: 1.5rem;
         }
-
-        .filter-group {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        .filter-group label {
-            font-size: 0.9rem;
-            color: var(--text);
-            font-weight: 600;
-        }
-
-        .multi-select-container {
-            position: relative;
-            display: block;
-        }
-
+        .filter-group { display: flex; flex-direction: column; gap: 0.5rem; }
+        .filter-group label { font-size: 0.9rem; font-weight: 600; }
+        .multi-select-container { position: relative; display: block; }
         .multi-select-button {
-            background: var(--bg);
-            border: 1px solid var(--border);
-            color: var(--text);
-            padding: 0.75rem;
-            border-radius: 8px;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            width: 100%;
-            font-size: 0.9rem;
-            transition: border-color 0.2s ease;
+            background: var(--bg); border: 1px solid var(--border); color: var(--text);
+            padding: 0.75rem; border-radius: 8px; cursor: pointer;
+            display: flex; justify-content: space-between; align-items: center;
+            width: 100%; font-size: 0.9rem; transition: border-color 0.2s ease;
         }
-
-        .multi-select-button:hover {
-            border-color: var(--primary);
-        }
-
+        .multi-select-button:hover { border-color: var(--primary); }
+        /* noinspection CssUnusedSymbol */
         .multi-select-button.active {
             border-color: var(--primary);
             background: color-mix(in oklab, var(--bg), var(--primary) 8%);
         }
-
         .multi-select-dropdown {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            box-shadow: var(--shadow);
-            z-index: 1000;
-            max-height: 300px;
-            display: none;
-            margin-top: 2px;
+            position: absolute; top: 100%; left: 0; right: 0;
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 8px; box-shadow: var(--shadow); z-index: 1000;
+            max-height: 300px; display: none; margin-top: 2px;
         }
-
-        .multi-select-dropdown.open {
-            display: block;
+        /* noinspection CssUnusedSymbol */
+                .multi-select-dropdown.open { display: block; }
+        /* noinspection CssUnusedSymbol */
+                .multi-select-search {
+            position: sticky; top: 0; background: var(--surface-2);
+            padding: 0.75rem; border-bottom: 1px solid var(--border-light);
         }
-
-        .multi-select-search {
-            position: sticky;
-            top: 0;
-            background: var(--surface-2);
-            padding: 0.75rem;
-            border-bottom: 1px solid var(--border-light);
-        }
-
         .multi-select-search input {
-            width: 100%;
-            padding: 0.5rem;
-            border: 1px solid var(--border);
-            background: var(--bg);
-            color: var(--text);
-            border-radius: 6px;
-            font-size: 0.85rem;
+            width: 100%; padding: 0.5rem; border: 1px solid var(--border);
+            background: var(--bg); color: var(--text); border-radius: 6px; font-size: 0.85rem;
         }
-
-        .multi-select-search input:focus {
-            outline: none;
-            box-shadow: var(--focus);
-            border-color: var(--primary);
+        .multi-select-search input:focus { outline: none; box-shadow: var(--focus); border-color: var(--primary); }
+        /* noinspection CssUnusedSymbol */
+                .multi-select-options { max-height: 200px; overflow-y: auto; }
+        /* noinspection CssUnusedSymbol */
+                .multi-select-option {
+            padding: 0.6rem 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;
+            font-size: 0.85rem; border-bottom: 1px solid var(--border-light); transition: background 0.2s ease;
         }
+        /* noinspection CssUnusedSymbol */
+                .multi-select-option:last-child { border-bottom: none; }
+        /* noinspection CssUnusedSymbol */
+                .multi-select-option:hover { background: var(--surface-2); }
+        /* noinspection CssUnusedSymbol */
+                .multi-select-option.hidden { display: none; }
+        .multi-select-option input[type="checkbox"] { margin: 0; accent-color: var(--primary); }
+        /* noinspection CssUnusedSymbol */
+                .no-results { padding: 1rem; text-align: center; color: var(--text-muted); font-style: italic; font-size: 0.85rem; }
 
-        .multi-select-options {
-            max-height: 200px;
-            overflow-y: auto;
-        }
-
-        .multi-select-option {
-            padding: 0.6rem 0.75rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.85rem;
-            border-bottom: 1px solid var(--border-light);
-            transition: background 0.2s ease;
-        }
-
-        .multi-select-option:last-child {
-            border-bottom: none;
-        }
-
-        .multi-select-option:hover {
-            background: var(--surface-2);
-        }
-
-        .multi-select-option.hidden {
-            display: none;
-        }
-
-        .multi-select-option input[type="checkbox"] {
-            margin: 0;
-            accent-color: var(--primary);
-        }
-
-        .no-results {
-            padding: 1rem;
-            text-align: center;
-            color: var(--text-muted);
-            font-style: italic;
-            font-size: 0.85rem;
-        }
-
-        /* Active Filters */
-        .active-filters-section {
-            margin-bottom: 1.5rem;
-        }
-
-        .active-filters-title {
-            font-size: 0.9rem;
-            color: var(--text-muted);
-            margin-bottom: 0.75rem;
-            font-weight: 500;
-        }
-
-        .active-filters {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            min-height: 32px;
-        }
-
+        .active-filters-section { margin-bottom: 1.5rem; }
+        .active-filters-title { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.75rem; font-weight: 500; }
+        .active-filters { display: flex; flex-wrap: wrap; gap: 0.5rem; min-height: 32px; }
+        /* noinspection CssUnusedSymbol */
         .filter-chip {
-            background: var(--primary);
-            color: white;
-            padding: 0.25rem 0.75rem;
-            border-radius: 999px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            animation: slideIn 0.2s ease-out;
+            background: var(--primary); color: white; padding: 0.25rem 0.75rem; border-radius: 999px;
+            font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;
         }
-
-        .filter-chip.cmaf-chip {
-            background: var(--accent);
-        }
-
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .filter-chip-category {
-            opacity: 0.8;
-            font-size: 0.7rem;
-        }
-
+        /* noinspection CssUnusedSymbol */
+        .filter-chip-category { opacity: 0.8; font-size: 0.7rem; }
+        /* noinspection CssUnusedSymbol */
         .filter-chip .remove-chip {
-            background: rgba(255,255,255,0.2);
-            border: none;
-            color: white;
-            border-radius: 50%;
-            width: 18px;
-            height: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 14px;
-            line-height: 1;
-            transition: background 0.2s ease;
+            background: rgba(255,255,255,0.2); border: none; color: white; border-radius: 50%;
+            width: 18px; height: 18px; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-size: 14px; line-height: 1; transition: background 0.2s ease;
         }
+        /* noinspection CssUnusedSymbol */
+        .filter-chip .remove-chip:hover { background: rgba(255,255,255,0.3); }
 
-        .filter-chip .remove-chip:hover {
-            background: rgba(255,255,255,0.3);
-        }
-
-        .clear-all-filters {
-            background: var(--danger);
-            color: white;
-            border: none;
-            padding: 0.4rem 0.8rem;
-            border-radius: 6px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.2s ease;
-        }
-
-        .clear-all-filters:hover {
-            background: var(--danger-hover);
-        }
-
-        /* Selection and Export Controls */
         .selection-controls {
-            background: var(--surface-2);
-            border: 1px solid var(--border-light);
-            border-radius: 8px;
-            padding: 1rem;
-            margin-bottom: 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 1rem;
+            background: var(--surface-2); border: 1px solid var(--border-light);
+            border-radius: 8px; padding: 1rem; margin-bottom: 2rem;
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;
         }
-
-        .selection-info {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            font-size: 0.9rem;
-            color: var(--text-muted);
-        }
-
+        .selection-info { display: flex; align-items: center; gap: 1rem; font-size: 0.9rem; color: var(--text-muted); }
         .selection-count {
-            background: var(--primary);
-            color: white;
-            padding: 0.25rem 0.75rem;
-            border-radius: 999px;
-            font-size: 0.8rem;
-            font-weight: 600;
+            background: var(--primary); color: white; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.8rem; font-weight: 600;
+        }
+        .selection-actions { display: flex; align-items: center; gap: 0.5rem; }
+        .btn {
+            background: var(--primary); color: white; border: none; padding: 0.5rem 1rem;
+            border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: background 0.2s ease;
+        }
+        .btn:hover { background: var(--primary-hover); }
+        .btn-danger { background: var(--danger); }
+        .btn-danger:hover { background: var(--danger-hover); }
+        .btn-accent { background: var(--accent); }
+        .btn-accent:hover { background: var(--accent-hover); }
+
+        .stats-bar {
+            background: var(--surface-2); padding: 1rem; border-radius: 8px;
+            display: flex; justify-content: space-between; align-items: center;
+            flex-wrap: wrap; gap: 1rem; margin-bottom: 2rem;
+        }
+        .stat-item { text-align: center; }
+        .stat-number { display: block; font-size: 1.5rem; font-weight: 800; color: var(--primary); }
+        .stat-label { font-size: 0.8rem; color: var(--text-muted); }
+
+        .media-table-container {
+            background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02)), var(--surface);
+            border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow);
+        }
+        .table-wrapper { overflow: auto; max-height: 70vh; position: relative; border-radius: var(--radius); }
+        table { width: 100%; border-collapse: collapse; min-width: 1000px; }
+        th {
+            background: var(--surface-2); padding: 1rem 0.75rem; text-align: left; font-weight: 700;
+            border-bottom: 2px solid var(--border); border-right: 2px solid var(--border-light);
+            font-size: 0.85rem; position: sticky; top: 0; z-index: 10;
+        }
+        th:last-child { border-right: none; }
+        td {
+            padding: 0.75rem; border-bottom: 1px solid var(--border); border-right: 1px solid var(--border-light);
+            font-size: 0.85rem; vertical-align: top;
+        }
+        td:last-child { border-right: none; }
+        tbody tr:hover { background: color-mix(in oklab, var(--surface), var(--primary) 4%); }
+        /* noinspection CssUnusedSymbol */
+        tbody tr.selected { background: color-mix(in oklab, var(--surface), var(--primary) 12%); }
+        .row-select { accent-color: var(--primary); transform: scale(1.1); }
+
+        .pagination { display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: var(--surface-2); border-top: 1px solid var(--border); }
+        .pagination-controls { display: flex; align-items: center; gap: 0.75rem; }
+        .pagination-controls button { min-width: 100px; }
+
+        .loading { text-align: center; padding: 2rem; color: var(--text-muted); }
+        .error {
+            background: #7f1d1d; border: 1px solid var(--danger); color: var(--text);
+            padding: 1rem; border-radius: 8px; margin: 1rem;
         }
 
-        .selection-actions {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .select-all-btn,
-        .clear-selection-btn,
-        .export-csv-btn {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 0.5rem 1rem;
+        .column-badge {
+            background: var(--surface-2);
+            border: 1px dashed var(--border-light);
+            color: var(--text-muted);
+            padding: 0.35rem 0.6rem;
             border-radius: 6px;
             font-size: 0.8rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.2s ease;
-        }
-
-        .select-all-btn:hover,
-        .export-csv-btn:hover {
-            background: var(--primary-hover);
-        }
-
-        .clear-selection-btn {
-            background: var(--danger);
-        }
-
-        .clear-selection-btn:hover {
-            background: var(--danger-hover);
-        }
-
-        .export-csv-btn {
-            background: var(--accent);
-        }
-
-        .export-csv-btn:hover {
-            background: var(--accent-hover);
-        }
-
-        /* Stats Bar */
-        .stats-bar {
-            background: var(--surface-2);
-            padding: 1rem;
-            border-radius: 8px;
-            display: flex;
-            justify-content: space-between;
+            display: inline-flex;
             align-items: center;
-            flex-wrap: wrap;
+            gap: 0.4rem;
+        }
+
+        /* Details panel now overlays on top of the table (larger) */
+        .media-layout {
+            display: grid;
+            grid-template-columns: 1fr; /* single column so table spans full width */
             gap: 1rem;
-            margin-bottom: 2rem;
+            align-items: start;
         }
+        .details-panel {
+            position: fixed;
+            top: 2rem; /* align with body padding */
+            right: 1.25rem; /* align with body horizontal padding */
+            width: min(840px, 50vw); /* larger than previous 1/3 column */
+            max-height: calc(100vh - 4rem); /* account for top/bottom offsets */
+            z-index: 2000; /* above dropdowns and table */
 
-        .stat-item {
-            text-align: center;
-        }
-
-        .stat-number {
-            display: block;
-            font-size: 1.5rem;
-            font-weight: 800;
-            color: var(--primary);
-        }
-
-        .stat-label {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-        }
-
-        /* Table Styles */
-        .media-table-container {
             background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02)), var(--surface);
             border: 1px solid var(--border);
             border-radius: var(--radius);
-            overflow: hidden;
             box-shadow: var(--shadow);
-        }
+            overflow: auto;
+            padding: 1rem;
 
-        .table-wrapper {
-            overflow-x: auto;
-            overflow-y: auto;
-            max-height: 70vh;
-            position: relative;
-            scroll-behavior: smooth;
-            border-radius: var(--radius);
+            /* Slide-in hidden by default (from right) */
+            transform: translateX(100%);
+            opacity: 0;
+            transition: transform 240ms ease, opacity 240ms ease;
         }
-
-        .media-table {
-            width: 100%;
-            border-collapse: collapse;
-            table-layout: fixed;
-            min-width: 1500px;
-            position: relative;
-        }
-
-        .media-table th {
-            background: var(--surface-2);
-            padding: 1rem 0.75rem;
-            text-align: left;
-            font-weight: 700;
-            color: var(--text);
-            border-bottom: 2px solid var(--border);
-            border-right: 2px solid var(--border-light);
-            font-size: 0.85rem;
-            letter-spacing: 0.3px;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            user-select: none;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
-        }
-
-        .media-table th:last-child {
-            border-right: none;
-        }
-
-        .media-table th.sortable {
-            cursor: pointer;
-            transition: background 0.2s ease;
-        }
-
-        .media-table th.sortable:hover {
-            background: color-mix(in oklab, var(--surface-2), var(--primary) 8%);
-        }
-
-        .media-table th.sortable .sort-indicator {
-            margin-left: 0.5rem;
-            font-size: 0.8rem;
-            opacity: 0.5;
-            transition: opacity 0.2s ease;
-        }
-
-        .media-table th.sortable.sort-active .sort-indicator {
+        /* noinspection CssUnusedSymbol */
+        .details-panel.open {
+            transform: translateX(0);
             opacity: 1;
-            color: var(--primary);
         }
-
-        .media-table th.resizable::after {
-            content: '';
-            position: absolute;
-            right: 0;
-            top: 0;
-            bottom: 0;
-            width: 8px;
-            background: transparent;
-            cursor: col-resize;
-            user-select: none;
-            z-index: 20;
+        @media (max-width: 900px) {
+            .details-panel {
+                left: 1.25rem; /* stretch across small screens */
+                right: 1.25rem;
+                width: auto;
+            }
         }
-
-        .media-table th.resizable:hover::after {
-            background: linear-gradient(90deg, transparent, var(--primary) 50%, transparent);
-            opacity: 0.6;
-        }
-
-        .media-table th.resizing::after {
-            background: var(--primary);
-            opacity: 0.8;
-            width: 4px;
-        }
-
-        .media-table td {
-            padding: 0.75rem;
+        .details-header {
+            display: flex; justify-content: space-between; align-items: center;
+            position: sticky; top: 0; background: var(--surface); padding-bottom: .5rem; margin-bottom: .5rem;
             border-bottom: 1px solid var(--border);
-            border-right: 1px solid var(--border-light);
-            color: var(--text);
-            vertical-align: top;
-            font-size: 0.85rem;
-            overflow: hidden;
-            position: relative;
         }
-
-        .media-table td:last-child {
-            border-right: none;
+        .pill {
+            display: inline-block; padding: .2rem .5rem; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border-light); font-size: .75rem;
         }
-
-        .media-table tbody tr:hover {
-            background: color-mix(in oklab, var(--surface), var(--primary) 4%);
+        .feature-pill {
+            display: inline-block; padding: .2rem .5rem; margin: 2px; border-radius: 999px; background: color-mix(in oklab, var(--primary), black 70%); font-size: .75rem;
         }
-
-        .media-table tbody tr.selected {
-            background: color-mix(in oklab, var(--surface), var(--primary) 12%);
+        .media-grid {
+            display: grid; grid-template-columns: 1fr; gap: .75rem;
         }
-
-        .media-table tbody {
-            position: relative;
+        .thumb-grid {
+            display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: .5rem;
         }
-
-        .media-table tbody tr:first-child td {
-            border-top: 1px solid transparent;
+        .thumb {
+            background: var(--surface-2); border: 1px solid var(--border-light); border-radius: 8px; overflow: hidden;
         }
-
-        /* Column widths */
-        .col-select { width: 50px; }
-        .col-title { width: 280px; }
-        .col-series { width: 220px; }
-        .col-season-episode { width: 80px; }
-        .col-type { width: 120px; }
-        .col-availability { width: 140px; }
-        .col-features { width: 180px; }
-        .col-cmaf { width: 100px; }
-        .col-updated { width: 160px; }
-        .col-guid { width: 200px; }
-
-        /* Row selection checkbox */
-        .row-select {
-            accent-color: var(--primary);
-            transform: scale(1.2);
-        }
-
-        /* Resize indicator line */
-        .resize-line {
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            width: 2px;
-            background: var(--primary);
-            opacity: 0.8;
-            pointer-events: none;
-            z-index: 1000;
-            display: none;
-            box-shadow: 0 0 4px rgba(96, 165, 250, 0.5);
-        }
-
-        .feature-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.25rem;
-        }
-
-        .feature-tag {
-            background: var(--accent);
-            color: white;
-            padding: 0.15rem 0.4rem;
-            border-radius: 999px;
-            font-size: 0.7rem;
-            font-weight: 600;
-            white-space: nowrap;
-        }
-
-        .content-type-badge {
-            background: var(--primary);
-            color: white;
-            padding: 0.2rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.7rem;
-            font-weight: 600;
-            white-space: nowrap;
-        }
-
-        .availability-badge {
-            padding: 0.2rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.7rem;
-            font-weight: 600;
-            white-space: nowrap;
-        }
-
-        .availability-badge.available {
-            background: var(--accent);
-            color: white;
-        }
-
-        .availability-badge.unavailable {
-            background: var(--danger);
-            color: white;
-        }
-
-        .availability-badge.unknown {
-            background: #6b7280;
-            color: white;
-        }
-
-        .cmaf-indicator {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.25rem;
-            padding: 0.2rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.7rem;
-            font-weight: 600;
-        }
-
-        .cmaf-enabled {
-            background: var(--accent);
-            color: white;
-        }
-
-        .cmaf-disabled {
-            background: #6b7280;
-            color: white;
-        }
-
-        /* GUID Deep Link Styles */
-        .guid-container {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .guid-link {
+        .thumb img { display: block; width: 100%; height: auto; }
+        .kv { display: grid; grid-template-columns: 140px 1fr; gap: .5rem .75rem; font-size: .85rem; }
+        .kv div.key { color: var(--text-muted); }
+        .section-title { font-weight: 700; margin-top: .5rem; margin-bottom: .25rem; }
+        .link {
             color: var(--primary);
             text-decoration: none;
-            flex: 1;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            font-weight: 500;
-            transition: color 0.2s ease;
         }
+        .link:hover { text-decoration: underline; }
+        .clickable-cell { cursor: pointer; text-decoration: underline; text-decoration-style: dotted; }
 
-        .guid-link:hover {
-            color: var(--primary-hover);
-            text-decoration: underline;
-        }
-
-        .guid-link:visited {
-            color: color-mix(in oklab, var(--primary), var(--text-muted) 30%);
-        }
-
-        .copy-guid-btn {
-            background: none;
-            border: 1px solid var(--border);
-            color: var(--text-muted);
-            padding: 0.2rem 0.4rem;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.8rem;
-            transition: all 0.2s ease;
-            flex-shrink: 0;
-        }
-
-        .copy-guid-btn:hover {
-            background: var(--surface-2);
-            color: var(--text);
-            border-color: var(--primary);
-        }
-
-        .copy-guid-btn.copied {
-            background: var(--accent);
-            color: white;
-            border-color: var(--accent);
-        }
-
-        .guid-text {
-            color: var(--text-muted);
-            font-style: italic;
-        }
-
-        /* Enhanced Pagination */
-        .pagination {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1.5rem;
-            background: var(--surface-2);
-            border-top: 1px solid var(--border);
-        }
-
-        .pagination-info {
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-            font-size: 0.85rem;
-            color: var(--text-muted);
-        }
-
-        .pagination-main {
-            font-weight: 600;
-            color: var(--text);
-            font-size: 0.9rem;
-        }
-
-        .pagination-details {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-        }
-
-        .pagination-controls {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .pagination-controls button {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 0.6rem 1.2rem;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 0.85rem;
-            transition: all 0.2s ease;
-            min-width: 100px;
-        }
-
-        .pagination-controls button:hover:not(:disabled) {
-            background: var(--primary-hover);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3);
-        }
-
-        .pagination-controls button:disabled {
-            background: #6b7280;
-            cursor: not-allowed;
-            opacity: 0.7;
-            transform: none;
-            box-shadow: none;
-        }
-
-        .page-jump {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.85rem;
-        }
-
-        .page-jump input {
-            width: 60px;
-            padding: 0.4rem;
-            border: 1px solid var(--border);
-            background: var(--surface);
-            color: var(--text);
-            border-radius: 4px;
-            text-align: center;
-            font-size: 0.85rem;
-        }
-
-        .page-jump input:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2);
-        }
-
-        .loading {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-muted);
-        }
-
-        .error {
-            background: #7f1d1d;
-            border: 1px solid var(--danger);
-            color: var(--text);
-            padding: 1rem;
-            border-radius: 8px;
-            margin: 1rem 0;
-        }
+                /* Generic badges for styled values */
+                .badge {
+                    display: inline-block;
+                    padding: .16rem .5rem;
+                    border-radius: 999px;
+                    border: 1px solid var(--border-light);
+                    font-size: .75rem;
+                    line-height: 1.2;
+                }
+                /* noinspection CssUnusedSymbol */
+                .badge-success { background: rgba(16,185,129,0.12); border-color: rgba(52,211,153,0.5); }
+                /* noinspection CssUnusedSymbol */
+                .badge-danger { background: rgba(239,68,68,0.12); border-color: rgba(248,113,113,0.5); }
+                /* noinspection CssUnusedSymbol */
+                .badge-warning { background: rgba(245,158,11,0.12); border-color: rgba(251,191,36,0.5); }
+                .badge-info { background: rgba(59,130,246,0.12); border-color: rgba(96,165,250,0.5); }
+                .badge-neutral { background: var(--surface-2); border-color: var(--border-light); }
+                .date-pill { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; opacity: 0.9; }
+                .country-pill { margin: 2px; }
+                .category-pill { background: color-mix(in oklab, var(--primary), black 75%); border-color: rgba(96,165,250,0.4); }
 
         @media (max-width: 768px) {
-            .controls-grid,
-            .filters-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .stats-bar {
-                flex-direction: column;
-                gap: 1rem;
-            }
-
-            .pagination {
-                flex-direction: column;
-                gap: 1rem;
-            }
-
-            .pagination-controls {
-                flex-direction: column;
-                width: 100%;
-            }
-
-            .pagination-controls button {
-                width: 100%;
-            }
-
-            .selection-controls {
-                flex-direction: column;
-                align-items: stretch;
-            }
+            .controls-grid, .filters-grid { grid-template-columns: 1fr; }
+            .stats-bar { flex-direction: column; gap: 1rem; }
+            .pagination { flex-direction: column; gap: 1rem; }
+            .pagination-controls { flex-direction: column; width: 100%; }
+            .pagination-controls button { width: 100%; }
+            .selection-controls { flex-direction: column; align-items: stretch; }
+            .media-layout { grid-template-columns: 1fr; }
+            .details-panel { order: 2; }
         }
     </style>
 </head>
@@ -854,13 +332,11 @@
     <h1>🎬 Media Vault Dashboard</h1>
 
     <div class="dashboard-controls">
-        <!-- Basic Controls -->
         <div class="controls-grid">
             <div class="control-group">
                 <label for="search">🔍 Search</label>
-                <input type="text" id="search" placeholder="Search titles...">
+                <input type="text" id="search" placeholder="Search titles or series..."/>
             </div>
-
             <div class="control-group">
                 <label for="per-page">📄 Items per Page</label>
                 <select id="per-page">
@@ -873,11 +349,9 @@
             </div>
         </div>
 
-        <!-- Multi-Select Filters -->
         <div class="multi-select-filters">
             <h3>🎯 Advanced Filters</h3>
 
-            <!-- Active Filters Display -->
             <div class="active-filters-section">
                 <div class="active-filters-title">Active Filters:</div>
                 <div class="active-filters" id="active-filters">
@@ -890,8 +364,7 @@
                     <label>📺 Series</label>
                     <div class="multi-select-container">
                         <button class="multi-select-button" data-filter="series">
-                            <span>Select series...</span>
-                            <span>▼</span>
+                            <span>Select series...</span><span>▼</span>
                         </button>
                         <div class="multi-select-dropdown"></div>
                     </div>
@@ -901,8 +374,7 @@
                     <label>🎭 Content Type</label>
                     <div class="multi-select-container">
                         <button class="multi-select-button" data-filter="contentType">
-                            <span>Select types...</span>
-                            <span>▼</span>
+                            <span>Select types...</span><span>▼</span>
                         </button>
                         <div class="multi-select-dropdown"></div>
                     </div>
@@ -912,8 +384,7 @@
                     <label>📡 Availability</label>
                     <div class="multi-select-container">
                         <button class="multi-select-button" data-filter="availability">
-                            <span>Select availability...</span>
-                            <span>▼</span>
+                            <span>Select availability...</span><span>▼</span>
                         </button>
                         <div class="multi-select-dropdown"></div>
                     </div>
@@ -923,8 +394,7 @@
                     <label>⭐ Features</label>
                     <div class="multi-select-container">
                         <button class="multi-select-button" data-filter="features">
-                            <span>Select features...</span>
-                            <span>▼</span>
+                            <span>Select features...</span><span>▼</span>
                         </button>
                         <div class="multi-select-dropdown"></div>
                     </div>
@@ -934,8 +404,7 @@
                     <label>📦 CMAF</label>
                     <div class="multi-select-container">
                         <button class="multi-select-button" data-filter="cmaf">
-                            <span>Select CMAF status...</span>
-                            <span>▼</span>
+                            <span>Select CMAF status...</span><span>▼</span>
                         </button>
                         <div class="multi-select-dropdown"></div>
                     </div>
@@ -945,8 +414,7 @@
                     <label>🔢 Season</label>
                     <div class="multi-select-container">
                         <button class="multi-select-button" data-filter="season">
-                            <span>Select seasons...</span>
-                            <span>▼</span>
+                            <span>Select seasons...</span><span>▼</span>
                         </button>
                         <div class="multi-select-dropdown"></div>
                     </div>
@@ -956,34 +424,43 @@
                     <label>🎬 Episode</label>
                     <div class="multi-select-container">
                         <button class="multi-select-button" data-filter="episode">
-                            <span>Select episodes...</span>
-                            <span>▼</span>
+                            <span>Select episodes...</span><span>▼</span>
                         </button>
                         <div class="multi-select-dropdown"></div>
                     </div>
                 </div>
+
+                <div class="filter-group">
+                    <label>🧱 Columns</label>
+                    <div class="multi-select-container">
+                        <button class="multi-select-button" data-filter="columns">
+                            <span>Select columns...</span><span>▼</span>
+                        </button>
+                        <div class="multi-select-dropdown"></div>
+                    </div>
+                    <div id="columns-selected-hint" class="column-badge" style="margin-top:8px;"></div>
+                </div>
             </div>
 
             <div style="text-align: center;">
-                <button class="clear-all-filters" id="clear-all-filters">🗑️ Clear All Filters</button>
+                <button class="btn btn-danger" id="clear-all-filters">🗑️ Clear All Filters</button>
             </div>
         </div>
     </div>
 
-    <!-- Selection and Export Controls -->
     <div class="selection-controls">
         <div class="selection-info">
             <span>📋 Selection:</span>
             <span class="selection-count" id="selection-count">0 selected</span>
         </div>
         <div class="selection-actions">
-            <button class="select-all-btn" id="select-all-btn">✅ Select All Filtered</button>
-            <button class="clear-selection-btn" id="clear-selection-btn">❌ Clear Selection</button>
-            <button class="export-csv-btn" id="export-csv-btn">📊 Export to CSV</button>
+            <button class="btn" id="select-all-visible-btn">✅ Select Page</button>
+            <button class="btn" id="select-all-btn">✅ Select All Filtered</button>
+            <button class="btn btn-danger" id="clear-selection-btn">❌ Clear Selection</button>
+            <button class="btn btn-accent" id="export-csv-btn">📊 Export to CSV</button>
         </div>
     </div>
 
-    <!-- Stats Bar -->
     <div class="stats-bar">
         <div class="stat-item">
             <span class="stat-number" id="total-items">0</span>
@@ -1007,98 +484,127 @@
         </div>
     </div>
 
-    <!-- Media Table -->
-    <div class="media-table-container">
-        <div class="loading" id="loading">Loading media data...</div>
-        <div class="error" id="error" style="display: none;"></div>
+    <div class="media-layout" id="media-layout" style="display:none;">
+        <div id="left-col">
+            <div class="media-table-container">
+                <div class="loading" id="loading">Loading media data...</div>
+                <div class="error" id="error" style="display:none;"></div>
 
-        <div class="table-wrapper" style="display: none;" id="table-wrapper">
-            <table class="media-table" id="media-table">
-                <thead>
-                <tr>
-                    <th class="col-select">
-                        <input type="checkbox" id="select-all-checkbox" class="row-select">
-                    </th>
-                    <th class="col-title sortable resizable" data-column="title" data-sort="title">
-                        Title
-                        <span class="sort-indicator">⇅</span>
-                    </th>
-                    <th class="col-series sortable resizable" data-column="series" data-sort="series_title">
-                        Series
-                        <span class="sort-indicator">⇅</span>
-                    </th>
-                    <th class="col-season-episode sortable resizable" data-column="season-episode" data-sort="season_number">
-                        S/E
-                        <span class="sort-indicator">⇅</span>
-                    </th>
-                    <th class="col-type sortable resizable" data-column="type" data-sort="content_type">
-                        Type
-                        <span class="sort-indicator">⇅</span>
-                    </th>
-                    <th class="col-availability sortable resizable" data-column="availability" data-sort="availability_state">
-                        Availability
-                        <span class="sort-indicator">⇅</span>
-                    </th>
-                    <th class="col-features resizable" data-column="features">Features</th>
-                    <th class="col-cmaf resizable" data-column="cmaf">CMAF</th>
-                    <th class="col-updated sortable resizable" data-column="updated" data-sort="updated_timestamp">
-                        Updated
-                        <span class="sort-indicator">⇅</span>
-                    </th>
-                    <th class="col-guid" data-column="guid">GUID</th>
-                </tr>
-                </thead>
-                <tbody id="media-tbody">
-                </tbody>
-            </table>
-        </div>
-
-        <div class="pagination" id="pagination" style="display: none;">
-            <div class="pagination-info">
-                <div class="pagination-main" id="pagination-main">Page 1 of 1</div>
-                <div class="pagination-details" id="pagination-details">Showing 0 to 0 of 0 entries</div>
-            </div>
-
-            <div class="pagination-controls">
-                <button id="prev-btn">« Previous</button>
-                <div class="page-jump">
-                    <span>Go to:</span>
-                    <input type="number" id="page-jump" min="1" placeholder="1">
+                <div class="table-wrapper" style="display:none;" id="table-wrapper">
+                    <table id="media-table">
+                        <thead>
+                        <tr id="table-head-row">
+                            <th style="width:50px;">
+                                <input type="checkbox" id="select-all-checkbox" class="row-select" aria-label="Select all rows"/>
+                            </th>
+                            <!-- dynamic headers -->
+                        </tr>
+                        </thead>
+                        <tbody id="media-tbody"></tbody>
+                    </table>
                 </div>
-                <button id="next-btn">Next »</button>
+
+                <div class="pagination" id="pagination" style="display:none;">
+                    <div>
+                        <div id="pagination-main">Page 1 of 1</div>
+                        <div id="pagination-details" style="color:var(--text-muted); font-size:0.85rem;">Showing 0 to 0 of 0 entries</div>
+                    </div>
+                    <div class="pagination-controls">
+                        <button class="btn" id="prev-btn">« Previous</button>
+                        <button class="btn" id="next-btn">Next »</button>
+                    </div>
+                </div>
             </div>
         </div>
+        <aside class="details-panel" id="details-panel" aria-live="polite">
+            <div class="details-header">
+                <div style="font-weight:700;">Media Details</div>
+                <button class="btn btn-danger" id="close-details-btn">Close</button>
+            </div>
+            <div id="details-content" style="color: var(--text-muted);">Select a media item to view details.</div>
+        </aside>
     </div>
 </div>
 
-<div class="resize-line" id="resize-line"></div>
-
 <script>
-    // Global variables
+    // Config and state
     let API_BASE = '';
     let currentPage = 1;
     let totalPages = 1;
     let totalItems = 0;
-    let isLoading = false;
     let allData = [];
-    let filteredData = []; // Data after applying filters
-    let displayedData = []; // Data currently displayed (paginated)
+    let filteredData = [];
+    let displayedData = [];
     let allStats = {};
-    let selectedRows = new Set();
+    const selectedRows = new Set();
+    let lastSelectedIndex = null;
 
-    // Sorting state
-    let currentSort = {
-        column: 'title',
-        direction: 'ASC'
+    // ALL selectable columns (flat and nested dot/bracket paths)
+    const ALL_COLUMNS = [
+        // Virtual/derived columns first
+        'CMAF Status',
+        // Schema columns
+        'guid','title','cbs$SeriesTitle','id','added','updated','approved','description','availableDate','ratings',
+        'cbs$EpisodeNumber','cbs$PrimaryCategoryName','cbs$SourcePartner','cbs$videoProperties','pubDate','provider',
+        'cbs$EpisodeFlag','cbs$PrimaryCategory','cbs$VideoID','ytcp$youTubeVideoIds','cbs$TMSSeriesID','cbs$SeasonNumber',
+        'cbs$premiumFeatures','cbs$contentType','excludeCountries','expirationDate','availabilityState','countries',
+        'cbs$ClosedCaptionURL','cbs$Omit','cbs$ProductionNumber','cbs$TMSProgramID','cbs$VTAG',
+        // Note: content[] and thumbnails[] are intentionally NOT offered in columns selector (kept nested only)
+        'cbs$Aired','cbs$Archive','cbs$CBSGenre','cbs$CategoryURL','cbs$DVRData','cbs$DynamicStreaming','cbs$Embeddable',
+        'cbs$EpisodeTitle','cbs$Episodic','cbs$Internal','cbs$IsClosedCaption','cbs$IsLive','cbs$IsLiveCDN',
+        'cbs$IsMigratedFromMPS','cbs$IsProtected','cbs$Label','cbs$Location','cbs$NoAd','cbs$PublishToYahoo','cbs$RepeatFlag',
+        'cbs$SIDseason','cbs$SIDseries','cbs$SIDtitle','cbs$SiteShowID','cbs$SourcePartnerLogoURL','cbs$SourceThumbnailLastUpdated',
+        'cbs$SourceType','cbs$SourceVideoLastUpdated','cbs$SubHeadline','cbs$TVRating','cbs$WatermarkPlayback','cbs$YouTubeLabel',
+        'cbs$YouTubeReferencePolicy','cbs$allAccessDownloadAvailability','cbs$artist','cbs$childContentId','cbs$clipEnd','cbs$clipSource',
+        'cbs$clipStart','cbs$cropValue','cbs$dARCode','cbs$dARName','cbs$dPRAired','cbs$dataURL','cbs$director',
+        'cbs$dontPublishToMSN','cbs$dontPublishToYoutube','cbs$drmPolicyId','cbs$drmPolicyName','cbs$eNTDARName',
+        'cbs$excludeNielsenTracking','cbs$excludeOzTam','cbs$forensicWatermark','cbs$genre','cbs$gracenoteVodMatch',
+        'cbs$hdrEncodingMode','cbs$ingestMethod','cbs$ingestedChapters','cbs$ingestedSidecars','cbs$isFeatured','cbs$itunescategory',
+        'cbs$itunesexplicit','cbs$localizedBrand','cbs$localizedBrandLocalized','cbs$localizedCast','cbs$localizedCastLocalized',
+        'cbs$localizedLabel','cbs$localizedLabelLocalized','cbs$localizedSeriesTitle','cbs$localizedSeriesTitleLocalized',
+        'cbs$localizedShortDescription','cbs$localizedShortDescriptionLocalized','cbs$originalLanguage',
+        'cbs$paramountPlusFreeAvailableDate','cbs$paramountPlusFreeExpirationDate','cbs$playbackEvents','cbs$producer',
+        'cbs$productPlacement','cbs$shortDescription','cbs$sizzleID','cbs$sizzleIDLocalized','cbs$sourceLanguage','cbs$stSeries',
+        'cbs$subRegionTargeting','cbs$svodFreeAvailableDate','cbs$svodFreeExpirationDate','cbs$trackName','cbs$uSAvailableDate',
+        'cbs$uSExpirationDate','cbs$useSourcePartnerPlayerLogo','cbs$vTTCaptions','cbs$videoRobotEncoding','cbs$youTubeCategory',
+        'cbs$youTubeDescription','cbs-workflow$resetUnicornPublish','msn$msnSource','pl2$approved','pl2$isUpdated',
+        'yt$video.status.privacyStatus','ytcp$youTubeAllowCommentRatings','ytcp$youTubeAllowComments','ytcp$youTubeAllowEmbedding',
+        'ytcp$youTubeAllowRatings','ytcp$youTubeAllowResponses','ytcp$youTubeAssetType','ytcp$youTubeBlockOutsideOwnership',
+        'ytcp$youTubeChannel','ytcp$youTubeClaimType','ytcp$youTubeCombinedDescription','ytcp$youTubeInStreamStandard',
+        'ytcp$youTubeInStreamTrueView','ytcp$youTubeInVideo','ytcp$youTubeMidRolls','ytcp$youTubeNotifySubscribers',
+        'ytcp$youTubePostRolls','ytcp$youTubePreRolls','ytcp$youTubePublic','ytcp$youTubePublicListed',
+        'ytcp$youTubeSavedUsageRights','ytcp$youTubeSavedUsageRights2','ytcp$youTubeVideoGenre'
+    ];
+
+    // Map schema keys to API item paths
+    const COLUMN_MAP = {
+        'title': 'title',
+        'guid': 'guid',
+        'updated': 'updated_timestamp',
+        'id': 'external_id',
+        'cbs$SeriesTitle': 'series_title',
+        'cbs$SeasonNumber': 'season_number',
+        'cbs$EpisodeNumber': 'episode_number',
+        'cbs$contentType': 'content_type',
+        'availabilityState': 'availability_state',
+        'cbs$premiumFeatures': 'premium_features',
+        'countries': 'countries'
     };
 
-    // Column resizing variables
-    let isResizing = false;
-    let currentColumn = null;
-    let startX = 0;
-    let startWidth = 0;
+    // Initial visible columns (do not include media arrays; they are shown in the details panel only)
+    const visibleColumns = new Set([
+        'title',
+        'cbs$SeasonNumber',
+        'cbs$EpisodeNumber',
+        'cbs$contentType',
+        'availabilityState',
+        'CMAF Status',
+        'cbs$premiumFeatures',
+        'updated',
+        'guid'
+    ]);
 
-    // Active filters store
+    // Filters state (start empty)
     const activeFilters = {
         series: new Set(),
         contentType: new Set(),
@@ -1109,49 +615,8 @@
         episode: new Set()
     };
 
-    // Filter configurations
-    const filterConfigs = {
-        series: {
-            field: 'series_title',
-            label: 'Series',
-            icon: '📺'
-        },
-        contentType: {
-            field: 'content_type',
-            label: 'Content Type',
-            icon: '🎭'
-        },
-        availability: {
-            field: 'availability_state',
-            label: 'Availability',
-            icon: '📡'
-        },
-        features: {
-            field: 'premium_features',
-            label: 'Features',
-            icon: '⭐',
-            isArray: true
-        },
-        cmaf: {
-            field: 'cmaf_status',
-            label: 'CMAF',
-            icon: '📦',
-            isComputed: true
-        },
-        season: {
-            field: 'season_number',
-            label: 'Season',
-            icon: '🔢'
-        },
-        episode: {
-            field: 'episode_number',
-            label: 'Episode',
-            icon: '🎬'
-        }
-    };
-
-    // DOM Elements
-    const elements = {
+    // DOM refs
+    const el = {
         loading: document.getElementById('loading'),
         error: document.getElementById('error'),
         tableWrapper: document.getElementById('table-wrapper'),
@@ -1163,7 +628,6 @@
         nextBtn: document.getElementById('next-btn'),
         paginationMain: document.getElementById('pagination-main'),
         paginationDetails: document.getElementById('pagination-details'),
-        pageJump: document.getElementById('page-jump'),
         totalItemsSpan: document.getElementById('total-items'),
         filteredItems: document.getElementById('filtered-items'),
         totalSeries: document.getElementById('total-series'),
@@ -1171,633 +635,638 @@
         encodedCount: document.getElementById('encoded-count'),
         activeFilters: document.getElementById('active-filters'),
         clearAllFilters: document.getElementById('clear-all-filters'),
-        resizeLine: document.getElementById('resize-line'),
         selectAllCheckbox: document.getElementById('select-all-checkbox'),
         selectionCount: document.getElementById('selection-count'),
+        selectAllVisibleBtn: document.getElementById('select-all-visible-btn'),
         selectAllBtn: document.getElementById('select-all-btn'),
         clearSelectionBtn: document.getElementById('clear-selection-btn'),
-        exportCsvBtn: document.getElementById('export-csv-btn')
+        exportCsvBtn: document.getElementById('export-csv-btn'),
+        tableHeadRow: document.getElementById('table-head-row'),
+        columnsHint: document.getElementById('columns-selected-hint'),
+        mediaLayout: document.getElementById('media-layout'),
+        detailsContent: document.getElementById('details-content'),
+        closeDetailsBtn: document.getElementById('close-details-btn')
     };
 
-    // Get unique identifier for a row
+    // Helpers
     function getRowId(item) {
-        return item.external_id || item.id || item.guid || `row_${Math.random().toString(36).substr(2, 9)}`;
+        return item.external_id || item.id || item.guid || `row_${item.title || ''}_${item.series_title || ''}_${Math.random().toString(36).slice(2)}`;
     }
-
-    // Simplified buildQueryParams - only need search and sorting
-    function buildQueryParams() {
-        const params = new URLSearchParams();
-
-        if (elements.search.value.trim()) {
-            params.append('search', elements.search.value.trim());
-        }
-
-        params.append('sortBy', currentSort.column);
-        params.append('sortOrder', currentSort.direction);
-
-        return params;
-    }
-
-    // Updated loadData function - much simpler now
-    async function loadData() {
-        if (isLoading) return;
-
-        isLoading = true;
-        elements.loading.style.display = 'block';
-        elements.error.style.display = 'none';
-        elements.tableWrapper.style.display = 'none';
-        elements.pagination.style.display = 'none';
-
-        try {
-            const params = buildQueryParams();
-            const response = await fetch(`${API_BASE}/items?${params}`);
-            const result = await response.json();
-
-            if (result.success) {
-                // Store all data from server
-                allData = result.data;
-                totalItems = result.totalItems;
-
-                // Apply client-side filters and pagination
-                applyFiltersAndPagination();
-
-                elements.loading.style.display = 'none';
-                elements.tableWrapper.style.display = 'block';
-                elements.pagination.style.display = 'flex';
-            } else {
-                throw new Error(result.error || 'Failed to load data');
-            }
-        } catch (error) {
-            elements.loading.style.display = 'none';
-            elements.error.style.display = 'block';
-            elements.error.textContent = 'Error loading data: ' + error.message;
-        }
-
-        isLoading = false;
-    }
-
-    // New function to handle all client-side filtering and pagination
-    function applyFiltersAndPagination() {
-        // Apply filters to get filtered dataset
-        filteredData = applyFilters(allData);
-
-        // Handle pagination based on dropdown selection
-        const perPageValue = elements.perPage.value;
-
-        if (perPageValue === 'ALL') {
-            // Show all filtered results
-            displayedData = [...filteredData];
-            totalPages = 1;
-            currentPage = 1;
-        } else {
-            // Paginate the filtered results
-            const itemsPerPage = parseInt(perPageValue);
-            totalPages = Math.ceil(filteredData.length / itemsPerPage);
-
-            // Ensure currentPage is valid
-            if (currentPage > totalPages) currentPage = totalPages || 1;
-            if (currentPage < 1) currentPage = 1;
-
-            const startIndex = (currentPage - 1) * itemsPerPage;
-            const endIndex = startIndex + itemsPerPage;
-            displayedData = filteredData.slice(startIndex, endIndex);
-        }
-
-        // Update UI
-        renderMediaTable(displayedData);
-        updatePagination();
-        updateStats(filteredData);
-        updateSelectionUI();
-        updateSortIndicators();
-    }
-
-    // Updated updatePagination function
-    function updatePagination() {
-        const perPageValue = elements.perPage.value;
-
-        if (perPageValue === 'ALL') {
-            elements.paginationMain.textContent = 'Showing All Results';
-            elements.paginationDetails.textContent = `Displaying all ${filteredData.length.toLocaleString()} filtered entries (${totalItems.toLocaleString()} total)`;
-
-            // Hide pagination controls
-            elements.prevBtn.style.display = 'none';
-            elements.nextBtn.style.display = 'none';
-            elements.pageJump.parentElement.style.display = 'none';
-        } else {
-            const itemsPerPage = parseInt(perPageValue);
-            const startItem = (currentPage - 1) * itemsPerPage + 1;
-            const endItem = Math.min(currentPage * itemsPerPage, filteredData.length);
-
-            elements.paginationMain.textContent = `Page ${currentPage} of ${totalPages}`;
-            elements.paginationDetails.textContent = `Showing ${startItem.toLocaleString()} to ${endItem.toLocaleString()} of ${filteredData.length.toLocaleString()} entries`;
-
-            elements.prevBtn.disabled = currentPage <= 1;
-            elements.nextBtn.disabled = currentPage >= totalPages;
-            elements.pageJump.max = totalPages;
-            elements.pageJump.placeholder = currentPage.toString();
-
-            // Show pagination controls
-            elements.prevBtn.style.display = 'inline-block';
-            elements.nextBtn.style.display = 'inline-block';
-            elements.pageJump.parentElement.style.display = 'flex';
-        }
-    }
-
-    // Updated stats function
-    function updateStats(filteredDataParam) {
-        elements.filteredItems.textContent = filteredDataParam.length.toLocaleString();
-
-        const cmafEnabled = filteredDataParam.filter(item => getCMAFStatus(item) === 'Enabled').length;
-        elements.cmafCount.textContent = cmafEnabled.toLocaleString();
-
-        if (allStats.premiumFeatures) {
-            const encodedFeature = allStats.premiumFeatures.find(f =>
-                f.feature && f.feature.toLowerCase().includes('encode')
-            );
-            elements.encodedCount.textContent = encodedFeature ? encodedFeature.count.toLocaleString() : '0';
-        }
-    }
-
-    // Updated selection functions
-    function selectAllVisibleOnCurrentPage() {
-        displayedData.forEach(item => {
-            selectedRows.add(getRowId(item));
-        });
-        updateSelectionUI();
-    }
-
-    function deselectAllVisibleOnCurrentPage() {
-        displayedData.forEach(item => {
-            selectedRows.delete(getRowId(item));
-        });
-        updateSelectionUI();
-    }
-
-    async function selectAllFiltered() {
-        elements.selectAllBtn.disabled = true;
-        elements.selectAllBtn.textContent = '🔄 Loading...';
-
-        try {
-            // Select all filtered items
-            filteredData.forEach(item => {
-                selectedRows.add(getRowId(item));
-            });
-
-            updateSelectionUI();
-        } catch (error) {
-            console.error('Error selecting all filtered:', error);
-            alert('Error selecting all items. Please try again.');
-        } finally {
-            elements.selectAllBtn.disabled = false;
-            elements.selectAllBtn.textContent = '✅ Select All Filtered';
-        }
-    }
-
-    // Updated selection UI
-    function updateSelectionUI() {
-        const count = selectedRows.size;
-        elements.selectionCount.textContent = `${count} selected`;
-
-        const totalVisible = displayedData.length;
-        const selectedVisibleIds = displayedData.map(item => getRowId(item));
-        const selectedVisible = selectedVisibleIds.filter(id => selectedRows.has(id)).length;
-
-        if (selectedVisible === 0) {
-            elements.selectAllCheckbox.checked = false;
-            elements.selectAllCheckbox.indeterminate = false;
-        } else if (selectedVisible === totalVisible && totalVisible > 0) {
-            elements.selectAllCheckbox.checked = true;
-            elements.selectAllCheckbox.indeterminate = false;
-        } else {
-            elements.selectAllCheckbox.checked = false;
-            elements.selectAllCheckbox.indeterminate = true;
-        }
-
-        document.querySelectorAll('.media-table tbody tr').forEach(row => {
-            const checkbox = row.querySelector('.row-checkbox');
-            if (checkbox) {
-                const id = checkbox.getAttribute('data-id');
-                checkbox.checked = selectedRows.has(id);
-
-                if (selectedRows.has(id)) {
-                    row.classList.add('selected');
-                } else {
-                    row.classList.remove('selected');
-                }
-            }
-        });
-    }
-
-    // Updated CSV export - much simpler now
-    async function exportToCsv() {
-        elements.exportCsvBtn.disabled = true;
-        elements.exportCsvBtn.textContent = '🔄 Loading...';
-
-        try {
-            let dataToExport;
-
-            if (selectedRows.size > 0) {
-                // Export only selected items from filtered data
-                dataToExport = filteredData.filter(item => selectedRows.has(getRowId(item)));
-            } else {
-                // Export all filtered data
-                dataToExport = filteredData;
-            }
-
-            if (dataToExport.length === 0) {
-                alert('No data to export');
-                return;
-            }
-
-            const headers = [
-                'Title', 'Series', 'Season', 'Episode', 'Content Type',
-                'Availability', 'Features', 'CMAF Status', 'Updated', 'GUID'
-            ];
-
-            const csvContent = [
-                headers.join(','),
-                ...dataToExport.map(item => [
-                    escapeCSV(item.title || ''),
-                    escapeCSV(item.series_title || ''),
-                    item.season_number || '',
-                    item.episode_number || '',
-                    escapeCSV(item.content_type || ''),
-                    escapeCSV(item.availability_state || ''),
-                    escapeCSV((item.premium_features || []).join('; ')),
-                    getCMAFStatus(item),
-                    formatDateForCSV(item.updated_timestamp),
-                    escapeCSV(item.guid || '')
-                ].join(','))
-            ].join('\n');
-
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-            link.setAttribute('href', url);
-            link.setAttribute('download', `media_export_${new Date().toISOString().split('T')[0]}.csv`);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-
-        } catch (error) {
-            console.error('Export error:', error);
-            alert('Export failed. Please try again.');
-        } finally {
-            elements.exportCsvBtn.disabled = false;
-            elements.exportCsvBtn.textContent = '📊 Export to CSV';
-        }
-    }
-
-    // Updated filter reload function
-    function applyFiltersAndReload() {
-        currentPage = 1; // Reset to first page when filters change
-        selectedRows.clear(); // Clear selections when filters change
-        applyFiltersAndPagination(); // Apply filters and update display
-    }
-
-    // Updated event listeners
-    function setupEventListeners() {
-        let searchTimeout;
-        elements.search.addEventListener('input', () => {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                currentPage = 1;
-                selectedRows.clear();
-                applyFiltersAndPagination();
-            }, 500);
-        });
-
-        elements.perPage.addEventListener('change', () => {
-            currentPage = 1;
-            applyFiltersAndPagination(); // Don't clear selections when changing page size
-        });
-
-        elements.prevBtn.addEventListener('click', () => {
-            if (currentPage > 1) {
-                currentPage--;
-                applyFiltersAndPagination();
-            }
-        });
-
-        elements.nextBtn.addEventListener('click', () => {
-            if (currentPage < totalPages) {
-                currentPage++;
-                applyFiltersAndPagination();
-            }
-        });
-
-        elements.pageJump.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                jumpToPage(e.target.value);
-                e.target.value = '';
-            }
-        });
-
-        elements.pageJump.addEventListener('blur', (e) => {
-            if (e.target.value) {
-                jumpToPage(e.target.value);
-                e.target.value = '';
-            }
-        });
-    }
-
-    function jumpToPage(pageNum) {
-        const page = parseInt(pageNum);
-        if (page >= 1 && page <= totalPages && page !== currentPage) {
-            currentPage = page;
-            applyFiltersAndPagination();
-        }
-    }
-
-    // Updated sorting handler
-    function initializeColumnSorting() {
-        const sortableHeaders = document.querySelectorAll('.sortable');
-
-        sortableHeaders.forEach(header => {
-            header.addEventListener('click', (e) => {
-                if (isResizing) return;
-
-                const rect = header.getBoundingClientRect();
-                const isRightEdge = e.clientX >= rect.right - 8;
-                if (isRightEdge) return;
-
-                const sortColumn = header.getAttribute('data-sort');
-
-                if (currentSort.column === sortColumn) {
-                    currentSort.direction = currentSort.direction === 'ASC' ? 'DESC' : 'ASC';
-                } else {
-                    currentSort.column = sortColumn;
-                    currentSort.direction = 'ASC';
-                }
-
-                updateSortIndicators();
-                currentPage = 1;
-
-                // If we have data, just re-sort client-side, otherwise reload from server
-                if (allData.length > 0) {
-                    sortAllData();
-                    applyFiltersAndPagination();
-                } else {
-                    loadData();
-                }
-            });
-        });
-    }
-
-    // New function to sort all data client-side
-    function sortAllData() {
-        allData.sort((a, b) => {
-            let aVal = a[currentSort.column];
-            let bVal = b[currentSort.column];
-
-            // Handle null/undefined values
-            if (aVal === null || aVal === undefined) aVal = '';
-            if (bVal === null || bVal === undefined) bVal = '';
-
-            // Convert to string for comparison
-            aVal = aVal.toString().toLowerCase();
-            bVal = bVal.toString().toLowerCase();
-
-            if (currentSort.direction === 'ASC') {
-                return aVal.localeCompare(bVal);
-            } else {
-                return bVal.localeCompare(aVal);
-            }
-        });
-    }
-
-    function updateSortIndicators() {
-        document.querySelectorAll('.sortable').forEach(header => {
-            const sortColumn = header.getAttribute('data-sort');
-            const indicator = header.querySelector('.sort-indicator');
-
-            header.classList.remove('sort-active');
-
-            if (sortColumn === currentSort.column) {
-                header.classList.add('sort-active');
-                indicator.textContent = currentSort.direction === 'ASC' ? '↑' : '↓';
-            } else {
-                indicator.textContent = '⇅';
-            }
-        });
-    }
-
-    // Selection functionality
-    function initializeSelection() {
-        elements.selectAllCheckbox.addEventListener('change', handleSelectAll);
-        elements.selectAllBtn.addEventListener('click', selectAllFiltered);
-        elements.clearSelectionBtn.addEventListener('click', clearSelection);
-        elements.exportCsvBtn.addEventListener('click', exportToCsv);
-    }
-
-    function handleSelectAll(e) {
-        const isChecked = e.target.checked;
-        if (isChecked) {
-            selectAllVisibleOnCurrentPage();
-        } else {
-            deselectAllVisibleOnCurrentPage();
-        }
-    }
-
-    function clearSelection() {
-        selectedRows.clear();
-        updateSelectionUI();
-    }
-
-    function toggleRowSelection(id) {
-        if (selectedRows.has(id)) {
-            selectedRows.delete(id);
-        } else {
-            selectedRows.add(id);
-        }
-        updateSelectionUI();
-    }
-
-    // Helper functions for CSV export
     function escapeCSV(str) {
         if (str === null || str === undefined) return '';
-        str = str.toString();
-        if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-            return '"' + str.replace(/"/g, '""') + '"';
+        const s = String(str);
+        if (s.includes('"') || s.includes(',') || s.includes('\n')) return `"${s.replace(/"/g, '""')}"`;
+        return s;
+    }
+    function escapeHTML(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+    function escapeAttr(s) {
+        return String(s).replace(/"/g,'&quot;');
+    }
+    function getByPath(obj, path) {
+        const mapped = COLUMN_MAP[path] || path;
+        const p = mapped.replace(/\[(\d+)\]/g, '.$1');
+        return p.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);
+    }
+    function isTimestampKey(key, val) {
+        const k = key.toLowerCase();
+        return (k.includes('date') || k.includes('time') || k.includes('updated') || k.includes('added') || k.includes('expiration')) && /^\d+$/.test(String(val));
+    }
+    // Treat keys that look like dates/times for normalization (numeric or ISO strings)
+    function isDateLikeKey(key) {
+        const k = String(key).toLowerCase();
+        return k.includes('date') || k.includes('time') || k.includes('updated') || k.includes('added') || k.includes('expiration');
+    }
+    function normalizeDateValue(key, val) {
+        if (val == null || val === '') return '';
+        // Numeric epoch
+        if (/^\d+$/.test(String(val))) {
+            const n = Number(val);
+            if (!Number.isNaN(n) && n > 0) {
+                try { return new Date(n).toISOString(); } catch { /* ignore */ }
+            }
         }
-        return str;
-    }
-
-    function formatDateForCSV(timestamp) {
-        if (!timestamp) return '';
-        const date = new Date(parseInt(timestamp));
-        return date.toISOString();
-    }
-
-    // Helper functions for rendering
-    function getCMAFStatus(item) {
-        const features = item.premium_features || [];
-        const hasCMAFFeatures = features.some(f =>
-            f.toLowerCase().includes('cmaf') ||
-            f.toLowerCase().includes('dash') ||
-            f.toLowerCase().includes('hls')
-        );
-        return hasCMAFFeatures ? 'Enabled' : 'Disabled';
-    }
-
-    function renderFeatureTags(features, columnWidth) {
-        if (!features || features.length === 0) return '<span style="color: var(--text-muted);">N/A</span>';
-
-        const sortedFeatures = [...features].sort((a, b) => a.localeCompare(b));
-
-        const tagWidth = 60;
-        const maxTags = Math.max(1, Math.floor((columnWidth - 20) / tagWidth));
-        const visibleFeatures = sortedFeatures.slice(0, maxTags);
-        const remainingCount = sortedFeatures.length - visibleFeatures.length;
-
-        let html = `<div class="feature-tags">`;
-        html += visibleFeatures.map(feature => `<span class="feature-tag">${feature}</span>`).join('');
-
-        if (remainingCount > 0) {
-            html += `<span style="color: var(--text-muted); font-size: 0.7rem;">+${remainingCount}</span>`;
+        // ISO or parseable date string
+        const d = new Date(val);
+        if (!isNaN(d.getTime())) {
+            try { return d.toISOString(); } catch { /* ignore */ }
         }
-        html += '</div>';
-
-        return html;
+        return String(val);
     }
-
+    function sanitizeCellDisplay(s) {
+        const str = String(s ?? '').trim();
+        if (!str) return '<span class="pill">-</span>';
+        return escapeHTML(str);
+    }
     function renderGUIDWithLink(guid) {
         if (!guid || guid === 'N/A') {
-            return `<span class="guid-text">${guid}</span>`;
+            const safe = escapeHTML(String(guid || '')) || '<span class="pill">-</span>';
+            return `<span class="guid-text">${safe}</span>`;
         }
-
-        const deeplink = `https://videorobot-ent.paramountplus.com/jobs/show_jobs?limit=25&offset=0&order_by=desc&sort_by=id&bu=all&show_qc=true&ref_id=${guid}`;
-        const displayGuid = guid.length > 18 ? guid.substring(0, 15) + '...' : guid;
-
+        const deeplink = `https://videorobot-ent.paramountplus.com/jobs/show_jobs?limit=25&offset=0&order_by=desc&sort_by=id&bu=all&show_qc=true&ref_id=${encodeURIComponent(guid)}`;
+        const displayGuid = String(guid).length > 18 ? String(guid).substring(0, 15) + '...' : String(guid);
+        const title = `Open in Video Robot (${guid})`;
         return `
-            <div class="guid-container">
-                <a href="${deeplink}" target="_blank" class="guid-link" title="Open in Video Robot (${guid})">
-                    ${displayGuid}
+            <div class="guid-container" style="display:flex;align-items:center;gap:.4rem;">
+                <a href="${deeplink}" target="_blank" rel="noopener" class="guid-link link" title="${escapeAttr(title)}">
+                    ${escapeHTML(displayGuid)}
                 </a>
-                <button class="copy-guid-btn" onclick="copyToClipboard('${guid}', this)" title="Copy GUID">
+                <button class="copy-guid-btn" onclick="copyToClipboard('${escapeAttr(String(guid))}', this)" title="Copy GUID" style="border:none;background:transparent;cursor:pointer;">
                     📋
                 </button>
             </div>
         `;
     }
-
-    function copyToClipboard(text, buttonElement) {
+    function copyToClipboard(text, btn) {
+        if (!navigator.clipboard) {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand('copy'); } finally { document.body.removeChild(ta); }
+            if (btn) { const prev = btn.textContent; btn.textContent = '✅'; setTimeout(()=> btn.textContent = prev, 1200); }
+            return;
+        }
         navigator.clipboard.writeText(text).then(() => {
-            const originalText = buttonElement.textContent;
-            buttonElement.textContent = '✓';
-            buttonElement.classList.add('copied');
+            if (btn) { const prev = btn.textContent; btn.textContent = '✅'; setTimeout(()=> btn.textContent = prev, 1200); }
+        }).catch(() => {
+            if (btn) { const prev = btn.textContent; btn.textContent = '⚠️'; setTimeout(()=> btn.textContent = prev, 1200); }
+        });
+    }
+    function getCMAFStatus(item) {
+        const features = normalizeAndSortFeatures(item.premium_features || []);
+        return features.some(f => (f||'').toLowerCase().includes('cmaf') || (f||'').toLowerCase().includes('dash') || (f||'').toLowerCase().includes('hls')) ? 'Enabled' : 'Disabled';
+    }
 
-            setTimeout(() => {
-                buttonElement.textContent = originalText;
-                buttonElement.classList.remove('copied');
-            }, 1500);
-        }).catch(err => {
-            console.error('Failed to copy: ', err);
+    // Normalize premium features (clean formatting, sort)
+    function normalizeAndSortFeatures(arr) {
+        if (!Array.isArray(arr)) return [];
+        const cleaned = arr
+            .flatMap(v => {
+                if (v == null) return [];
+                let s = String(v).trim();
+                if (s.startsWith('[') && s.endsWith(']')) s = s.slice(1, -1);
+                s = s.replace(/"\s+"/g, '","');
+                if (s.includes(',')) return s.split(',').map(x => x.trim()).filter(Boolean);
+                return [s];
+            })
+            .map(s => s.replace(/^"+|"+$/g,'').replace(/^'+|'+$/g,'').trim())
+            .filter(Boolean);
+        const seen = new Map();
+        for (const f of cleaned) {
+            const key = f.toLowerCase();
+            if (!seen.has(key)) seen.set(key, f);
+        }
+        const uniq = Array.from(seen.values());
+        return uniq.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+    }
+
+    // Transform: nest array-like flat fields (content[*], thumbnails[*]) into media-level objects
+    function nestArrays(row) {
+        const media = { ...row };
+        const content = [];
+        const thumbnails = [];
+        Object.keys(media).forEach(k => {
+            let m = k.match(/^content\[(\d+)]\.(.+)$/);
+            if (m) {
+                const idx = Number(m[1]);
+                content[idx] = content[idx] || {};
+                content[idx][m[2]] = media[k];
+                delete media[k];
+                return;
+            }
+            m = k.match(/^thumbnails\[(\d+)]\.(.+)$/);
+            if (m) {
+                const idx = Number(m[1]);
+                thumbnails[idx] = thumbnails[idx] || {};
+                thumbnails[idx][m[2]] = media[k];
+                delete media[k];
+            }
+        });
+        if (content.length) media.content = content;
+        if (thumbnails.length) media.thumbnails = thumbnails;
+
+        if (media.premium_features) {
+            media.premium_features = normalizeAndSortFeatures(media.premium_features);
+        }
+
+        return media;
+    }
+
+    // Config
+    async function loadConfig() {
+        try {
+            const r = await fetch('/api/config');
+            if (r.ok) {
+                const j = await r.json();
+                if (j.success) { API_BASE = j.config.API_BASE; return; }
+            }
+        } catch {}
+        try {
+            const r = await fetch('http://localhost:3001/api/config');
+            if (r.ok) {
+                const j = await r.json();
+                if (j.success) { API_BASE = j.config.API_BASE; return; }
+            }
+        } catch {}
+        API_BASE = 'http://localhost:3001/api';
+    }
+
+    // Data loading
+    async function loadFilters() {
+        try {
+            const r = await fetch(`${API_BASE}/stats`);
+            const j = await r.json();
+            if (j.success) {
+                allStats = j.data;
+                document.getElementById('total-items').textContent = j.data.totalItems.toLocaleString();
+                document.getElementById('total-series').textContent = j.data.totalSeries.toLocaleString();
+            }
+        } catch {}
+    }
+
+    function buildQueryParams() {
+        const p = new URLSearchParams();
+        const s = el.search.value.trim();
+        if (s) p.append('search', s);
+        p.append('sortBy', 'title');
+        p.append('sortOrder', 'ASC');
+        return p;
+    }
+
+    async function loadData() {
+        el.loading.style.display = 'block';
+        el.error.style.display = 'none';
+        el.tableWrapper.style.display = 'none';
+        el.pagination.style.display = 'none';
+
+        try {
+            const params = buildQueryParams();
+            const r = await fetch(`${API_BASE}/items?${params}`);
+            const j = await r.json();
+            if (!j.success) throw new Error(j.error || 'Failed to load');
+            allData = (j.data || []).map(nestArrays);
+            totalItems = j.totalItems || allData.length;
+
+            applyFiltersAndPagination();
+            el.loading.style.display = 'none';
+            el.tableWrapper.style.display = 'block';
+            el.pagination.style.display = 'flex';
+            el.mediaLayout.style.display = 'grid';
+        } catch (e) {
+            el.loading.style.display = 'none';
+            el.error.style.display = 'block';
+            el.error.textContent = 'Error loading data: ' + e.message;
+        }
+    }
+
+    // Filtering + pagination
+    function applyFiltersAndPagination() {
+        filteredData = applyFilters(allData);
+
+        const per = el.perPage.value;
+        if (per === 'ALL') {
+            displayedData = [...filteredData];
+            totalPages = 1; currentPage = 1;
+        } else {
+            const n = parseInt(per, 10);
+            totalPages = Math.max(1, Math.ceil(filteredData.length / n));
+            if (currentPage > totalPages) currentPage = totalPages;
+            if (currentPage < 1) currentPage = 1;
+            const start = (currentPage - 1) * n;
+            displayedData = filteredData.slice(start, start + n);
+        }
+
+        renderTableHeader();
+        renderTableBody(displayedData);
+        updatePagination();
+        updateStats(filteredData);
+        updateSelectionUI();
+    }
+
+    function applyFilters(data) {
+        return data.filter(item => {
+            if (activeFilters.series.size && !activeFilters.series.has(String(item.series_title || ''))) return false;
+            if (activeFilters.contentType.size && !activeFilters.contentType.has(String(item.content_type || ''))) return false;
+            if (activeFilters.availability.size && !activeFilters.availability.has(String(item.availability_state || ''))) return false;
+            if (activeFilters.features.size) {
+                const feats = normalizeAndSortFeatures(item.premium_features || []);
+                const hit = feats.some(f => activeFilters.features.has(String(f)));
+                if (!hit) return false;
+            }
+            if (activeFilters.cmaf.size) {
+                const status = getCMAFStatus(item);
+                if (!activeFilters.cmaf.has(status)) return false;
+            }
+            if (activeFilters.season.size && !activeFilters.season.has(String(item.season_number ?? ''))) return false;
+            if (activeFilters.episode.size && !activeFilters.episode.has(String(item.episode_number ?? ''))) return false;
+
+            const q = el.search.value.trim().toLowerCase();
+            if (q) {
+                const hay = `${item.title || ''} ${item.series_title || ''}`.toLowerCase();
+                if (!hay.includes(q)) return false;
+            }
+            return true;
         });
     }
 
-    function renderMediaTable(data) {
-        elements.mediaTbody.innerHTML = data.map(item => {
-            const title = item.title || 'N/A';
-            const series = item.series_title || 'N/A';
-            const guid = item.guid || 'N/A';
-            const cmafStatus = getCMAFStatus(item);
-            const itemId = getRowId(item);
+    function updatePagination() {
+        const per = el.perPage.value;
+        if (per === 'ALL') {
+            el.paginationMain.textContent = 'Showing All Results';
+            el.paginationDetails.textContent = `Displaying all ${filteredData.length.toLocaleString()} filtered entries (${totalItems.toLocaleString()} total)`;
+            el.prevBtn.disabled = true; el.nextBtn.disabled = true;
+        } else {
+            const n = parseInt(per, 10);
+            const start = (currentPage - 1) * n + 1;
+            const end = Math.min(currentPage * n, filteredData.length);
+            el.paginationMain.textContent = `Page ${currentPage} of ${totalPages}`;
+            el.paginationDetails.textContent = `Showing ${start.toLocaleString()} to ${end.toLocaleString()} of ${filteredData.length.toLocaleString()} entries`;
+            el.prevBtn.disabled = currentPage <= 1;
+            el.nextBtn.disabled = currentPage >= totalPages;
+        }
+    }
 
-            const featuresColumn = document.querySelector('.col-features');
-            const featuresWidth = featuresColumn ? parseInt(getComputedStyle(featuresColumn).width) : 180;
+    function updateStats(fd) {
+        document.getElementById('filtered-items').textContent = fd.length.toLocaleString();
+        const cmafEnabled = fd.filter(item => getCMAFStatus(item) === 'Enabled').length;
+        document.getElementById('cmaf-count').textContent = cmafEnabled.toLocaleString();
 
+        if (allStats.premiumFeatures) {
+            const encoded = allStats.premiumFeatures.find(f => (f.feature || '').toLowerCase().includes('encode'));
+            document.getElementById('encoded-count').textContent = encoded ? encoded.count.toLocaleString() : '0';
+        }
+    }
+
+    // Columns UI
+    function renderTableHeader() {
+        while (el.tableHeadRow.children.length > 1) el.tableHeadRow.removeChild(el.tableHeadRow.lastChild);
+        Array.from(visibleColumns).forEach(col => {
+            const th = document.createElement('th');
+            th.textContent = col;
+            el.tableHeadRow.appendChild(th);
+        });
+        updateColumnsHint();
+    }
+
+    function updateColumnsHint() {
+        const maxShow = 4;
+        const cols = Array.from(visibleColumns);
+        const shown = cols.slice(0, maxShow).join(', ');
+        const more = cols.length > maxShow ? ` +${cols.length - maxShow} more` : '';
+        el.columnsHint.textContent = cols.length ? `Columns: ${shown}${more}` : 'No columns selected';
+    }
+
+    function renderTableBody(data) {
+        el.mediaTbody.innerHTML = data.map(item => {
+            const id = getRowId(item);
+            const tds = Array.from(visibleColumns).map(col => {
+                // Computed CMAF status
+                if (col === 'CMAF Status') {
+                    const status = getCMAFStatus(item);
+                    const pill = `<span class="pill" style="border-color:${status==='Enabled' ? 'rgba(52,211,153,0.5)' : 'rgba(248,113,113,0.5)'}; background:${status==='Enabled' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)'};">${status}</span>`;
+                    return `<td title="Current CMAF status">${pill}</td>`;
+                }
+                // Title: open details on click
+                if (col === 'title') {
+                    const v = (item.title ?? '').toString();
+                    const display = sanitizeCellDisplay(v);
+                    return `<td class="clickable-cell" data-col="title" title="Click to view details in panel">${display}</td>`;
+                }
+                // Premium features as pills
+                if (col === 'cbs$premiumFeatures' || col === 'premium_features') {
+                    const feats = normalizeAndSortFeatures(item.premium_features || []);
+                    const pills = feats.map(v => `<span class=\"feature-pill\" title=\"${escapeAttr(String(v))}\">${escapeHTML(String(v))}</span>`).join(' ');
+                    return `<td class=\"clickable-cell\" data-col=\"premium_features\" title=\"Click to view details in panel\">${pills || '<span class=\"pill\">None</span>'}</td>`;
+                }
+                // Availability badge
+                if (col === 'availabilityState' || col === 'availability_state') {
+                    const raw = (item.availability_state ?? getByPath(item, col) ?? '').toString();
+                    const low = raw.toLowerCase();
+                    let cls = 'badge-neutral';
+                    if (low.includes('available')) cls = 'badge-success';
+                    else if (low.includes('expired') || low.includes('unavailable')) cls = 'badge-danger';
+                    else if (low.includes('coming') || low.includes('soon') || low.includes('pending')) cls = 'badge-warning';
+                    else if (low) cls = 'badge-info';
+                    const label = raw || '-';
+                    return `<td title="${escapeAttr(label)}"><span class="badge ${cls}">${escapeHTML(label)}</span></td>`;
+                }
+                // Content type/category badge
+                if (col === 'cbs$contentType' || col === 'content_type') {
+                    const v = (getByPath(item, col) ?? '').toString();
+                    return `<td title="${escapeAttr(v)}"><span class="badge badge-info category-pill">${escapeHTML(v || '-')}</span></td>`;
+                }
+                // Countries as compact pills
+                if (col === 'countries') {
+                    let countries = getByPath(item, col);
+                    if (countries == null) countries = [];
+                    if (typeof countries === 'string') countries = countries.split(',');
+                    if (!Array.isArray(countries)) {
+                        try { countries = JSON.parse(String(countries)); } catch { countries = [String(countries)]; }
+                    }
+                    countries = countries.map(c => String(c).trim()).filter(Boolean);
+                    const uniq = Array.from(new Set(countries));
+                    const shown = uniq.slice(0, 4);
+                    const more = uniq.length - shown.length;
+                    const pills = shown.map(c => `<span class=\"badge country-pill\">${escapeHTML(c)}</span>`).join(' ');
+                    const moreBadge = more > 0 ? ` <span class=\"badge badge-neutral\">+${more}</span>` : '';
+                    const title = uniq.join(', ');
+                    return `<td title="${escapeAttr(title)}">${pills || '<span class=\"pill\">-</span>'}${moreBadge}</td>`;
+                }
+
+                // Fetch raw value for generic handling
+                let rawVal = getByPath(item, col);
+                if (rawVal == null) rawVal = '';
+
+                // Booleans as Yes/No badges
+                const rawType = typeof rawVal;
+                if (rawType === 'boolean' || rawVal === 'true' || rawVal === 'false' || rawVal === true || rawVal === false) {
+                    const b = (rawVal === true || rawVal === 'true');
+                    const label = b ? 'Yes' : 'No';
+                    const cls = b ? 'badge-success' : 'badge-danger';
+                    return `<td title="${label}"><span class="badge ${cls}">${label}</span></td>`;
+                }
+
+                // Arrays/objects to string
+                let val = rawVal;
+                if (Array.isArray(val)) {
+                    if (val.every(v => typeof v !== 'object')) {
+                        val = val.join('; ');
+                    } else {
+                        try { val = JSON.stringify(val); } catch { val = String(val); }
+                    }
+                } else if (typeof val === 'object' && val !== null) {
+                    try { val = JSON.stringify(val); } catch { val = String(val); }
+                }
+
+                // Normalize and style date-like values
+                if (isDateLikeKey(col)) {
+                    const norm = normalizeDateValue(col, val);
+                    return `<td title="${escapeAttr(String(norm))}"><span class="badge badge-neutral date-pill">${escapeHTML(String(norm))}</span></td>`;
+                }
+
+                // GUID special rendering
+                if (col === 'guid') {
+                    const html = renderGUIDWithLink(val);
+                    return `<td title="${escapeAttr(String(val || ''))}">${html}</td>`;
+                }
+
+                // Default cell
+                const display = sanitizeCellDisplay(String(val));
+                return `<td title="${escapeAttr(String(val))}">${display}</td>`;
+            }).join('');
+            const checked = selectedRows.has(id) ? 'checked' : '';
+            const rowSelectedClass = selectedRows.has(id) ? 'selected' : '';
             return `
-                <tr>
-                    <td class="col-select">
-                        <input type="checkbox" class="row-checkbox row-select"
-                               data-id="${itemId}"
-                               onchange="toggleRowSelection('${itemId}')">
-                    </td>
-                    <td class="col-title" title="${title}">${title.length > 35 ? title.substring(0, 32) + '...' : title}</td>
-                    <td class="col-series" title="${series}">${series.length > 25 ? series.substring(0, 22) + '...' : series}</td>
-                    <td class="col-season-episode">
-                        ${item.season_number ? `S${item.season_number}` : ''}
-                        ${item.episode_number ? `E${item.episode_number}` : ''}
-                    </td>
-                    <td class="col-type">${renderContentTypeBadge(item.content_type)}</td>
-                    <td class="col-availability">${renderAvailabilityBadge(item.availability_state)}</td>
-                    <td class="col-features">${renderFeatureTags(item.premium_features, featuresWidth)}</td>
-                    <td class="col-cmaf">${renderCMAFIndicator(cmafStatus)}</td>
-                    <td class="col-updated">${formatDate(item.updated_timestamp)}</td>
-                    <td class="col-guid">${renderGUIDWithLink(guid)}</td>
-                </tr>
-            `;
+        <tr class="${rowSelectedClass}" data-row-id="${id}">
+          <td><input type="checkbox" class="row-select row-checkbox" data-id="${id}" ${checked}/></td>
+          ${tds}
+        </tr>
+      `;
         }).join('');
 
-        if (data.length === 0) {
-            elements.mediaTbody.innerHTML = `
-                <tr>
-                    <td colspan="10" style="text-align: center; padding: 2rem; color: var(--text-muted);">
-                        No media items found matching the current filters.
-                    </td>
-                </tr>
-            `;
+        if (!data.length) {
+            const colSpan = 1 + visibleColumns.size;
+            el.mediaTbody.innerHTML = `<tr><td colspan="${colSpan}" style="text-align:center; padding:2rem; color:var(--text-muted);">No media items found matching the current filters.</td></tr>`;
         }
+
+        el.mediaTbody.querySelectorAll('.row-checkbox').forEach(cb => {
+            cb.addEventListener('change', (e) => {
+                const id = e.target.getAttribute('data-id');
+                const idx = displayedData.findIndex(it => getRowId(it) === id);
+                const shouldCheck = e.target.checked;
+
+                if (e.shiftKey && lastSelectedIndex !== null && idx !== -1) {
+                    const [start, end] = [Math.min(lastSelectedIndex, idx), Math.max(lastSelectedIndex, idx)];
+                    for (let i = start; i <= end; i++) {
+                        const rid = getRowId(displayedData[i]);
+                        if (shouldCheck) selectedRows.add(rid); else selectedRows.delete(rid);
+                        const rowCb = el.mediaTbody.querySelector(`.row-checkbox[data-id="${rid}"]`);
+                        if (rowCb) rowCb.checked = shouldCheck;
+                    }
+                } else {
+                    if (shouldCheck) selectedRows.add(id);
+                    else selectedRows.delete(id);
+                    lastSelectedIndex = idx;
+                }
+                updateSelectionUI();
+            });
+        });
+
+        // Clicking a row toggles selection unless clicking an interactive element; details open only via explicit cells
+        el.mediaTbody.querySelectorAll('tr').forEach((tr, rowIndex) => {
+            tr.addEventListener('click', (ev) => {
+                const target = ev.target;
+                if (!target) return;
+                // Ignore clicks on interactive elements
+                if (target.closest('a') || target.closest('button') || target.classList.contains('row-checkbox')) return;
+
+                const rowId = tr.getAttribute('data-row-id');
+                const cb = tr.querySelector('.row-checkbox');
+                if (!rowId || !cb) return;
+
+                if (ev.metaKey || ev.ctrlKey) {
+                    // Toggle selection only
+                    cb.checked = !cb.checked;
+                    if (cb.checked) selectedRows.add(rowId); else selectedRows.delete(rowId);
+                    lastSelectedIndex = rowIndex;
+                } else if (ev.shiftKey && lastSelectedIndex !== null) {
+                    const [start, end] = [Math.min(lastSelectedIndex, rowIndex), Math.max(lastSelectedIndex, rowIndex)];
+                    const shouldCheck = true; // range select adds
+                    for (let i = start; i <= end; i++) {
+                        const rid = getRowId(displayedData[i]);
+                        selectedRows.add(rid);
+                        const rowCb = el.mediaTbody.querySelector(`.row-checkbox[data-id="${rid}"]`);
+                        if (rowCb) rowCb.checked = true;
+                    }
+                } else {
+                    // Single selection: clear others, select this
+                    selectedRows.clear();
+                    cb.checked = true;
+                    selectedRows.add(rowId);
+                    lastSelectedIndex = rowIndex;
+                }
+
+                updateSelectionUI();
+            });
+        });
+
+        // Explicit open details when clicking cells marked clickable
+        el.mediaTbody.querySelectorAll('td.clickable-cell').forEach(td => {
+            td.addEventListener('click', (ev) => {
+                ev.stopPropagation();
+                const tr = td.closest('tr');
+                const rowId = tr?.getAttribute('data-row-id');
+                const item = displayedData.find(it => getRowId(it) === rowId);
+                if (item) openDetailsPanel(item);
+            });
+        });
 
         updateSelectionUI();
     }
 
-    // Helper functions
-    function formatDate(timestamp) {
-        if (!timestamp) return 'N/A';
-        const date = new Date(parseInt(timestamp));
-        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-    }
+    // Selection
+    function updateSelectionUI() {
+        const count = selectedRows.size;
+        el.selectionCount.textContent = `${count} selected`;
 
-    function renderCMAFIndicator(status) {
-        const isEnabled = status === 'Enabled';
-        return `<span class="cmaf-indicator ${isEnabled ? 'cmaf-enabled' : 'cmaf-disabled'}">
-            ${isEnabled ? '✅' : '❌'} ${status}
-        </span>`;
-    }
+        const idsOnPage = displayedData.map(getRowId);
+        const selectedOnPage = idsOnPage.filter(id => selectedRows.has(id)).length;
+        if (idsOnPage.length === 0) {
+            el.selectAllCheckbox.checked = false;
+            el.selectAllCheckbox.indeterminate = false;
+        } else if (selectedOnPage === 0) {
+            el.selectAllCheckbox.checked = false;
+            el.selectAllCheckbox.indeterminate = false;
+        } else if (selectedOnPage === idsOnPage.length) {
+            el.selectAllCheckbox.checked = true;
+            el.selectAllCheckbox.indeterminate = false;
+        } else {
+            el.selectAllCheckbox.checked = false;
+            el.selectAllCheckbox.indeterminate = true;
+        }
 
-    function renderContentTypeBadge(type) {
-        if (!type) return '<span style="color: var(--text-muted);">N/A</span>';
-        return `<span class="content-type-badge">${type}</span>`;
-    }
-
-    function renderAvailabilityBadge(state) {
-        if (!state) return `<span class="availability-badge unknown">Unknown</span>`;
-        const className = state.toLowerCase().includes('available') ? 'available' :
-            state.toLowerCase().includes('unavailable') ? 'unavailable' : 'unknown';
-        return `<span class="availability-badge ${className}">${state}</span>`;
-    }
-
-    // Apply filters to data
-    function applyFilters(data) {
-        return data.filter(item => {
-            return Object.keys(activeFilters).every(filterType => {
-                const filterSet = activeFilters[filterType];
-                if (filterSet.size === 0) return true;
-
-                const config = filterConfigs[filterType];
-
-                if (config.isComputed && filterType === 'cmaf') {
-                    const cmafStatus = getCMAFStatus(item);
-                    return filterSet.has(cmafStatus);
-                }
-
-                let itemValue = item[config.field];
-
-                if (config.isArray && Array.isArray(itemValue)) {
-                    return itemValue.some(val => filterSet.has(val.toString()));
-                } else if (itemValue !== null && itemValue !== undefined) {
-                    return filterSet.has(itemValue.toString());
-                }
-
-                return false;
-            });
+        // Sync row checkbox states and selected styling on the current page
+        el.mediaTbody.querySelectorAll('tr').forEach(tr => {
+            const cb = tr.querySelector('.row-checkbox');
+            if (!cb) return;
+            const id = cb.getAttribute('data-id');
+            const isSelected = selectedRows.has(id);
+            cb.checked = isSelected;
+            if (isSelected) tr.classList.add('selected');
+            else tr.classList.remove('selected');
         });
+
+        // Do NOT auto-open/close the details panel based on selection. The overlay
+        // should open only from explicit user intent (clicking a clickable cell),
+        // so export-selection flows never conflict with the details overlay.
     }
 
-    // Initialize multi-select functionality
+    function selectAllVisible() {
+        displayedData.forEach(item => selectedRows.add(getRowId(item)));
+        updateSelectionUI();
+    }
+    function deselectAllVisible() {
+        displayedData.forEach(item => selectedRows.delete(getRowId(item)));
+        updateSelectionUI();
+    }
+    function selectAllFiltered() {
+        filteredData.forEach(item => selectedRows.add(getRowId(item)));
+        updateSelectionUI();
+    }
+    function clearSelection() {
+        selectedRows.clear();
+        updateSelectionUI();
+    }
+
+    function exportToCsv() {
+        el.exportCsvBtn.disabled = true;
+        el.exportCsvBtn.textContent = '🔄 Loading...';
+        try {
+            let data = [];
+            if (selectedRows.size > 0) {
+                const ids = new Set(selectedRows);
+                data = filteredData.filter(item => ids.has(getRowId(item)));
+            } else {
+                data = filteredData;
+            }
+            if (!data.length) {
+                alert('No data to export');
+                return;
+            }
+            const headers = Array.from(visibleColumns);
+            const lines = [
+                headers.map(h => escapeCSV(h)).join(','),
+                ...data.map(item => headers.map(h => {
+                    let v;
+                    if (h === 'CMAF Status') {
+                        v = getCMAFStatus(item);
+                    } else {
+                        v = getByPath(item, h);
+                        if (h === 'cbs$premiumFeatures' || h === 'premium_features') {
+                            v = normalizeAndSortFeatures(item.premium_features || []).join('; ');
+                        }
+                    }
+                    if (v == null) v = '';
+                    if (typeof v === 'object') {
+                        try { v = JSON.stringify(v); } catch { v = String(v); }
+                    }
+                    if (Array.isArray(v)) {
+                        if (v.every(x => typeof x !== 'object')) v = v.join('; ');
+                        else { try { v = JSON.stringify(v); } catch { v = String(v); } }
+                    }
+                    if (isTimestampKey(h, v)) {
+                        const n = Number(v);
+                        if (!Number.isNaN(n) && n > 0) v = new Date(n).toISOString();
+                    }
+                    return escapeCSV(String(v));
+                }).join(','))
+            ];
+            const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `media_export_${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+        } finally {
+            el.exportCsvBtn.disabled = false;
+            el.exportCsvBtn.textContent = '📊 Export to CSV';
+        }
+    }
+
+    // Multi-selects
+    const filterConfigs = {
+        series: { field: 'series_title', label: 'Series', icon: '📺' },
+        contentType: { field: 'content_type', label: 'Content Type', icon: '🎭' },
+        availability: { field: 'availability_state', label: 'Availability', icon: '📡' },
+        features: { field: 'premium_features', label: 'Features', icon: '⭐', isArray: true },
+        cmaf: { field: 'cmaf_status', label: 'CMAF', icon: '📦', isComputed: true },
+        season: { field: 'season_number', label: 'Season', icon: '🔢' },
+        episode: { field: 'episode_number', label: 'Episode', icon: '🎬' },
+        columns: { field: '__columns__', label: 'Columns', icon: '🧱', isCustom: true }
+    };
+
     function initializeMultiSelect() {
         const buttons = document.querySelectorAll('.multi-select-button');
 
@@ -1808,103 +1277,54 @@
 
             button.addEventListener('click', (e) => {
                 e.stopPropagation();
-
-                buttons.forEach(otherButton => {
-                    if (otherButton !== button) {
-                        const otherContainer = otherButton.closest('.multi-select-container');
-                        const otherDropdown = otherContainer.querySelector('.multi-select-dropdown');
-                        otherDropdown.classList.remove('open');
-                        otherButton.classList.remove('active');
-                    }
+                document.querySelectorAll('.multi-select-dropdown').forEach(dd => {
+                    if (dd !== dropdown) dd.classList.remove('open');
+                });
+                document.querySelectorAll('.multi-select-button').forEach(b => {
+                    if (b !== button) b.classList.remove('active');
                 });
 
-                const isOpen = dropdown.classList.contains('open');
                 dropdown.classList.toggle('open');
                 button.classList.toggle('active');
-
-                if (!isOpen) {
+                if (dropdown.classList.contains('open')) {
                     populateDropdown(filterType, dropdown);
                     const searchInput = dropdown.querySelector('.multi-select-search input');
-                    if (searchInput) {
-                        setTimeout(() => searchInput.focus(), 100);
-                    }
+                    if (searchInput) setTimeout(() => searchInput.focus(), 50);
                 }
             });
         });
 
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.multi-select-container')) {
-                buttons.forEach(button => {
-                    const container = button.closest('.multi-select-container');
-                    const dropdown = container.querySelector('.multi-select-dropdown');
-                    dropdown.classList.remove('open');
-                    button.classList.remove('active');
-                });
+                document.querySelectorAll('.multi-select-dropdown').forEach(dd => dd.classList.remove('open'));
+                document.querySelectorAll('.multi-select-button').forEach(b => b.classList.remove('active'));
             }
         });
 
-        elements.clearAllFilters.addEventListener('click', clearAllFilters);
+        el.clearAllFilters.addEventListener('click', () => {
+            Object.keys(activeFilters).forEach(k => activeFilters[k].clear());
+            updateActiveFiltersDisplay();
+            applyFiltersAndPagination();
+        });
+
+        updateButtonText('columns');
+        updateActiveFiltersDisplay();
     }
 
     function populateDropdown(filterType, dropdown) {
-        const config = filterConfigs[filterType];
-        const values = getUniqueValues(config, filterType);
-
+        const cfg = filterConfigs[filterType];
         dropdown.innerHTML = '';
 
         const searchContainer = document.createElement('div');
         searchContainer.className = 'multi-select-search';
-
         const searchInput = document.createElement('input');
         searchInput.type = 'text';
-        searchInput.placeholder = `Search ${config.label.toLowerCase()}...`;
-        searchInput.addEventListener('input', (e) => {
-            filterDropdownOptions(dropdown, e.target.value);
-        });
-        searchInput.addEventListener('click', (e) => e.stopPropagation());
-
+        searchInput.placeholder = `Search ${cfg.label.toLowerCase()}...`;
         searchContainer.appendChild(searchInput);
         dropdown.appendChild(searchContainer);
 
         const optionsContainer = document.createElement('div');
         optionsContainer.className = 'multi-select-options';
-
-        const sortedValues = [...values].sort((a, b) => {
-            if (!isNaN(a) && !isNaN(b)) {
-                return parseInt(a) - parseInt(b);
-            }
-            return a.toString().localeCompare(b.toString());
-        });
-
-        sortedValues.forEach(value => {
-            const option = document.createElement('div');
-            option.className = 'multi-select-option';
-            option.setAttribute('data-value', value.toString().toLowerCase());
-
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.value = value;
-            checkbox.checked = activeFilters[filterType].has(value.toString());
-
-            checkbox.addEventListener('change', (e) => {
-                if (e.target.checked) {
-                    activeFilters[filterType].add(value.toString());
-                } else {
-                    activeFilters[filterType].delete(value.toString());
-                }
-                updateActiveFiltersDisplay();
-                updateButtonText(filterType);
-                applyFiltersAndReload();
-            });
-
-            const label = document.createElement('span');
-            label.textContent = value;
-
-            option.appendChild(checkbox);
-            option.appendChild(label);
-            optionsContainer.appendChild(option);
-        });
-
         dropdown.appendChild(optionsContainer);
 
         const noResults = document.createElement('div');
@@ -1912,284 +1332,261 @@
         noResults.textContent = 'No options found';
         noResults.style.display = 'none';
         dropdown.appendChild(noResults);
-    }
 
-    function filterDropdownOptions(dropdown, searchTerm) {
-        const options = dropdown.querySelectorAll('.multi-select-option');
-        const noResults = dropdown.querySelector('.no-results');
-        const searchLower = searchTerm.toLowerCase();
-        let visibleCount = 0;
+        let values = [];
+        if (filterType === 'columns') {
+            const blocked = new Set(['content','thumbnails']);
+            values = [...ALL_COLUMNS].filter(c => !blocked.has(c)).sort((a,b)=>a.localeCompare(b));
+        } else if (cfg.isComputed && filterType === 'cmaf') {
+            values = ['Enabled','Disabled'];
+        } else {
+            const s = new Set();
+            allData.forEach(item => {
+                let v = item[cfg.field];
+                if (filterType === 'features') v = normalizeAndSortFeatures(v || []);
+                if (cfg.isArray && Array.isArray(v)) v.forEach(x => x && s.add(String(x)));
+                else if (v !== null && v !== undefined && v !== '') s.add(String(v));
+            });
+            values = [...s].sort((a,b)=>{
+                if (!isNaN(a) && !isNaN(b)) return Number(a)-Number(b);
+                return a.localeCompare(b);
+            });
+        }
 
-        options.forEach(option => {
-            const value = option.getAttribute('data-value');
-            const text = option.querySelector('span').textContent.toLowerCase();
-            const isVisible = value.includes(searchLower) || text.includes(searchLower);
+        values.forEach(val => {
+            const opt = document.createElement('div');
+            opt.className = 'multi-select-option';
+            opt.setAttribute('data-value', String(val).toLowerCase());
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            if (filterType === 'columns') cb.checked = visibleColumns.has(val);
+            else cb.checked = activeFilters[filterType].has(val);
 
-            if (isVisible) {
-                option.classList.remove('hidden');
-                visibleCount++;
-            } else {
-                option.classList.add('hidden');
-            }
-        });
-
-        noResults.style.display = visibleCount === 0 && searchTerm.trim() !== '' ? 'block' : 'none';
-    }
-
-    function getUniqueValues(config, filterType) {
-        const values = new Set();
-
-        allData.forEach(item => {
-            if (config.isComputed && filterType === 'cmaf') {
-                values.add(getCMAFStatus(item));
-            } else {
-                let itemValue = item[config.field];
-
-                if (config.isArray && Array.isArray(itemValue)) {
-                    itemValue.forEach(val => {
-                        if (val) values.add(val);
-                    });
-                } else if (itemValue !== null && itemValue !== undefined && itemValue !== '') {
-                    values.add(itemValue.toString());
+            cb.addEventListener('change', () => {
+                if (filterType === 'columns') {
+                    if (cb.checked) visibleColumns.add(val);
+                    else visibleColumns.delete(val);
+                    updateButtonText('columns');
+                    renderTableHeader();
+                    renderTableBody(displayedData);
+                } else {
+                    if (cb.checked) activeFilters[filterType].add(val);
+                    else activeFilters[filterType].delete(val);
+                    updateButtonText(filterType);
+                    updateActiveFiltersDisplay();
+                    currentPage = 1;
+                    selectedRows.clear();
+                    applyFiltersAndPagination();
                 }
-            }
+            });
+
+            const label = document.createElement('span');
+            label.textContent = val;
+
+            opt.appendChild(cb);
+            opt.appendChild(label);
+            optionsContainer.appendChild(opt);
         });
 
-        return values;
+        searchInput.addEventListener('input', () => {
+            const q = searchInput.value.toLowerCase();
+            let visible = 0;
+            optionsContainer.querySelectorAll('.multi-select-option').forEach(opt => {
+                const v = opt.getAttribute('data-value') || '';
+                if (v.includes(q)) { opt.classList.remove('hidden'); visible++; }
+                else opt.classList.add('hidden');
+            });
+            noResults.style.display = (visible === 0 && q) ? 'block' : 'none';
+        });
     }
 
     function updateButtonText(filterType) {
-        const button = document.querySelector(`[data-filter="${filterType}"]`);
+        const button = document.querySelector(`.multi-select-button[data-filter="${filterType}"]`);
+        if (!button) return;
         const span = button.querySelector('span');
-        const count = activeFilters[filterType].size;
-        const config = filterConfigs[filterType];
-
-        if (count === 0) {
-            span.textContent = `Select ${config.label.toLowerCase()}...`;
-        } else {
-            span.textContent = `${count} ${config.label.toLowerCase()}${count > 1 ? 's' : ''} selected`;
+        if (filterType === 'columns') {
+            const count = visibleColumns.size;
+            span.textContent = `${count} column${count !== 1 ? 's':''} selected`;
+            return;
         }
+        const cfg = filterConfigs[filterType];
+        const count = activeFilters[filterType].size;
+        span.textContent = count ? `${count} ${cfg.label.toLowerCase()}${count>1?'s':''} selected` : `Select ${cfg.label.toLowerCase()}...`;
     }
 
     function updateActiveFiltersDisplay() {
-        elements.activeFilters.innerHTML = '';
-        let hasFilters = false;
-
-        Object.keys(activeFilters).forEach(filterType => {
-            const config = filterConfigs[filterType];
-            activeFilters[filterType].forEach(value => {
-                hasFilters = true;
+        el.activeFilters.innerHTML = '';
+        let has = false;
+        Object.keys(activeFilters).forEach(type => {
+            const cfg = filterConfigs[type];
+            activeFilters[type].forEach(val => {
+                has = true;
                 const chip = document.createElement('div');
                 chip.className = 'filter-chip';
-
-                if (filterType === 'cmaf') {
-                    chip.classList.add('cmaf-chip');
-                }
-
-                const category = document.createElement('span');
-                category.className = 'filter-chip-category';
-                category.textContent = `${config.icon} ${config.label}:`;
-
+                const cat = document.createElement('span');
+                cat.className = 'filter-chip-category';
+                cat.textContent = `${cfg.icon} ${cfg.label}:`;
                 const text = document.createElement('span');
-                text.textContent = value;
-
-                const removeBtn = document.createElement('button');
-                removeBtn.className = 'remove-chip';
-                removeBtn.textContent = '×';
-                removeBtn.onclick = () => {
-                    activeFilters[filterType].delete(value);
+                text.textContent = val;
+                const rm = document.createElement('button');
+                rm.className = 'remove-chip';
+                rm.textContent = '×';
+                rm.addEventListener('click', () => {
+                    activeFilters[type].delete(val);
+                    updateButtonText(type);
                     updateActiveFiltersDisplay();
-                    updateButtonText(filterType);
-                    updateDropdownCheckboxes(filterType);
-                    applyFiltersAndReload();
-                };
-
-                chip.appendChild(category);
-                chip.appendChild(text);
-                chip.appendChild(removeBtn);
-                elements.activeFilters.appendChild(chip);
+                    currentPage = 1;
+                    selectedRows.clear();
+                    applyFiltersAndPagination();
+                });
+                chip.appendChild(cat); chip.appendChild(text); chip.appendChild(rm);
+                el.activeFilters.appendChild(chip);
             });
         });
-
-        if (!hasFilters) {
-            const placeholder = document.createElement('span');
-            placeholder.style.color = 'var(--text-muted)';
-            placeholder.style.fontStyle = 'italic';
-            placeholder.textContent = 'No filters applied';
-            elements.activeFilters.appendChild(placeholder);
+        if (!has) {
+            const span = document.createElement('span');
+            span.style.color = 'var(--text-muted)';
+            span.style.fontStyle = 'italic';
+            span.textContent = 'No filters applied';
+            el.activeFilters.appendChild(span);
         }
     }
 
-    function updateDropdownCheckboxes(filterType) {
-        const button = document.querySelector(`[data-filter="${filterType}"]`);
-        const dropdown = button.closest('.multi-select-container').querySelector('.multi-select-dropdown');
-        const checkboxes = dropdown.querySelectorAll('input[type="checkbox"]');
-
-        checkboxes.forEach(checkbox => {
-            checkbox.checked = activeFilters[filterType].has(checkbox.value);
-        });
-    }
-
-    function clearAllFilters() {
-        Object.keys(activeFilters).forEach(filterType => {
-            activeFilters[filterType].clear();
-            updateButtonText(filterType);
-        });
-        updateActiveFiltersDisplay();
-        applyFiltersAndReload();
-    }
-
-    // Column resizing functionality
-    function initializeColumnResizing() {
-        const headers = document.querySelectorAll('.media-table th.resizable');
-
-        headers.forEach(header => {
-            header.addEventListener('mousedown', handleMouseDown);
+    // Events
+    function setupEvents() {
+        let t;
+        el.search.addEventListener('input', () => {
+            clearTimeout(t);
+            t = setTimeout(() => {
+                currentPage = 1;
+                applyFiltersAndPagination();
+            }, 300);
         });
 
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
-    }
-
-    function handleMouseDown(e) {
-        const rect = e.target.getBoundingClientRect();
-        const isRightEdge = e.clientX >= rect.right - 8;
-
-        if (isRightEdge) {
-            e.preventDefault();
-            isResizing = true;
-            currentColumn = e.target;
-            startX = e.clientX;
-            startWidth = parseInt(window.getComputedStyle(currentColumn).width, 10);
-            currentColumn.classList.add('resizing');
-            document.body.style.cursor = 'col-resize';
-            document.body.style.userSelect = 'none';
-            elements.resizeLine.style.display = 'block';
-            elements.resizeLine.style.left = e.clientX + 'px';
-        }
-    }
-
-    function handleMouseMove(e) {
-        if (!isResizing) {
-            const target = e.target;
-            if (target.classList.contains('resizable')) {
-                const rect = target.getBoundingClientRect();
-                const isRightEdge = e.clientX >= rect.right - 8;
-                target.style.cursor = isRightEdge ? 'col-resize' : 'pointer';
-            }
-            return;
-        }
-
-        const width = startWidth + (e.clientX - startX);
-        const minWidth = 60;
-        const maxWidth = 500;
-        const clampedWidth = Math.max(minWidth, Math.min(maxWidth, width));
-
-        if (clampedWidth >= minWidth) {
-            currentColumn.style.width = clampedWidth + 'px';
-            elements.resizeLine.style.left = e.clientX + 'px';
-
-            const columnName = currentColumn.getAttribute('data-column');
-            updateColumnWidth(columnName, clampedWidth);
-        }
-    }
-
-    function handleMouseUp() {
-        if (isResizing) {
-            isResizing = false;
-            currentColumn.classList.remove('resizing');
-
-            if (currentColumn.getAttribute('data-column') === 'features') {
-                renderMediaTable(displayedData);
-            }
-
-            currentColumn = null;
-            document.body.style.cursor = 'default';
-            document.body.style.userSelect = 'auto';
-            elements.resizeLine.style.display = 'none';
-        }
-    }
-
-    function updateColumnWidth(columnName, width) {
-        const className = `.col-${columnName}`;
-        const elementsToUpdate = document.querySelectorAll(className);
-
-        elementsToUpdate.forEach(element => {
-            element.style.width = `${width}px`;
+        el.perPage.addEventListener('change', () => {
+            currentPage = 1;
+            applyFiltersAndPagination();
         });
-    }
 
-    // Load filters data
-    async function loadFilters() {
-        try {
-            const response = await fetch(`${API_BASE}/stats`);
-            const result = await response.json();
+        el.prevBtn.addEventListener('click', () => {
+            if (currentPage > 1) { currentPage--; applyFiltersAndPagination(); }
+        });
+        el.nextBtn.addEventListener('click', () => {
+            if (currentPage < totalPages) { currentPage++; applyFiltersAndPagination(); }
+        });
 
-            if (result.success) {
-                allStats = result.data;
-                elements.totalItemsSpan.textContent = result.data.totalItems.toLocaleString();
-                elements.totalSeries.textContent = result.data.totalSeries.toLocaleString();
-            }
-        } catch (error) {
-            console.error('Error loading filters:', error);
+        el.selectAllCheckbox.addEventListener('change', (e) => {
+            if (e.target.checked) selectAllVisible();
+            else deselectAllVisible();
+        });
+
+        el.selectAllVisibleBtn.addEventListener('click', selectAllVisible);
+        el.selectAllBtn.addEventListener('click', selectAllFiltered);
+        el.clearSelectionBtn.addEventListener('click', clearSelection);
+        el.exportCsvBtn.addEventListener('click', exportToCsv);
+
+        if (el.closeDetailsBtn) {
+            el.closeDetailsBtn.addEventListener('click', () => {
+                closeDetailsPanel();
+            });
         }
     }
 
-    // Load configuration first
-    async function loadConfig() {
-        try {
-            // Try to get config from current origin first
-            const response = await fetch('/api/config');
-            if (response.ok) {
-                const result = await response.json();
-                if (result.success) {
-                    API_BASE = result.config.API_BASE;
-                    return;
-                }
-            }
-        } catch (error) {
-            console.warn('Failed to load config from current origin, trying localhost');
+    // Details panel controls
+    function closeDetailsPanel() {
+        if (el.detailsContent) {
+            el.detailsContent.innerHTML = 'Select a media item to view details.';
         }
-        
-        // Fallback to localhost for development
-        try {
-            const response = await fetch('http://localhost:3001/api/config');
-            if (response.ok) {
-                const result = await response.json();
-                if (result.success) {
-                    API_BASE = result.config.API_BASE;
-                    return;
-                }
-            }
-        } catch (error) {
-            console.warn('Failed to load config from localhost');
-        }
-        
-        // Final fallback
-        API_BASE = 'http://localhost:3001/api';
+        const panel = document.getElementById('details-panel');
+        if (panel) panel.classList.remove('open');
     }
 
-    // Updated initialize function
+    // Details panel renderer (always shows nested Content and Thumbnails)
+    function openDetailsPanel(item) {
+        const panel = el.detailsContent;
+        const title = item.title || '(untitled)';
+        const series = item.series_title ? ` • ${item.series_title}` : '';
+        const guid = item.guid || item.external_id || '';
+        const updatedSafe = normalizeDateValue('updated', item.updated_timestamp);
+        const headerHTML = `
+            <div class="kv" style="margin-bottom:.5rem;">
+                <div class="key">Title</div><div>${escapeHTML(title)}${series}</div>
+                <div class="key">GUID</div><div>${escapeHTML(guid)} ${guid ? `<a class="link" href="https://videorobot.cbsivideo.com/#/video/${encodeURIComponent(guid)}" target="_blank" rel="noopener">Open in VR ↗</a>` : ''}</div>
+                <div class="key">Updated</div><div>${updatedSafe ? escapeHTML(String(updatedSafe)) : '-'}</div>
+            </div>
+        `;
+
+        const feats = normalizeAndSortFeatures(item.premium_features || []);
+        const featuresHTML = feats.length
+            ? feats.map(f => `<span class="feature-pill">${escapeHTML(String(f))}</span>`).join('')
+            : '<span class="pill">No features</span>';
+
+        const toArray = (v) => Array.isArray(v) ? v : (v && typeof v === 'object' ? Object.values(v) : []);
+        const contentArr = toArray(item.content);
+        const thumbsArr = toArray(item.thumbnails);
+
+        panel.innerHTML = `
+            ${headerHTML}
+            <div class="section-title">Premium Features</div>
+            <div style="margin-bottom:.5rem;">${featuresHTML}</div>
+
+            <div class="section-title">Content Renditions (${contentArr.length})</div>
+            <div class="media-grid">
+                ${contentArr.map((c, i) => `
+                    <div style="border:1px solid var(--border-light); border-radius:8px; padding:.5rem; background:var(--surface-2);">
+                        <div class="pill" style="margin-bottom:.5rem;">#${i+1} ${escapeHTML(c.title || c.format || c.contentType || '')}</div>
+                        <div class="kv">
+                            <div class="key">ID</div><div>${escapeHTML(c.id ?? '')}</div>
+                            <div class="key">GUID</div><div>${escapeHTML(c.guid ?? '')}</div>
+                            <div class="key">Format</div><div>${escapeHTML(c.format ?? '')}</div>
+                            <div class="key">Type</div><div>${escapeHTML(c.contentType ?? '')}</div>
+                            <div class="key">Bitrate</div><div>${escapeHTML(c.bitrate ?? '')}</div>
+                            <div class="key">Asset Types</div><div>${Array.isArray(c.assetTypes)? c.assetTypes.map(a=>`<span class="pill">${escapeHTML(String(a))}</span>`).join(' ') : ''}</div>
+                            <div class="key">URL</div><div>${c.url ? `<a class="link" href="${escapeAttr(c.url)}" target="_blank" rel="noopener">Open Source ↗</a>` : '-'}</div>
+                            <div class="key">Streaming</div><div>${c.streamingUrl ? `<a class="link" href="${escapeAttr(c.streamingUrl)}" target="_blank" rel="noopener">Open Stream ↗</a>` : '-'}</div>
+                            <div class="key">Added</div><div>${(() => { const v = normalizeDateValue('added', c.added); return v ? escapeHTML(String(v)) : '-'; })()}</div>
+                            <div class="key">Updated</div><div>${(() => { const v = normalizeDateValue('updated', c.updated); return v ? escapeHTML(String(v)) : '-'; })()}</div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+
+            <div class="section-title">Thumbnails (${thumbsArr.length})</div>
+            <div class="thumb-grid">
+                ${thumbsArr.map((t, i) => `
+                    <div class="thumb">
+                        ${t.url ? `<img src="${escapeAttr(t.url)}" alt="thumbnail ${i+1}"/>` : ''}
+                        <div style="padding:.5rem;">
+                            <div class="pill" style="margin-bottom:.25rem;">#${i+1} ${escapeHTML(t.title || t.format || t.contentType || '')}</div>
+                            <div class="kv">
+                                <div class="key">ID</div><div>${escapeHTML(t.id ?? '')}</div>
+                                <div class="key">GUID</div><div>${escapeHTML(t.guid ?? '')}</div>
+                                <div class="key">Format</div><div>${escapeHTML(t.format ?? '')}</div>
+                                <div class="key">Type</div><div>${escapeHTML(t.contentType ?? '')}</div>
+                                <div class="key">Asset Types</div><div>${Array.isArray(t.assetTypes)? t.assetTypes.map(a=>`<span class="pill">${escapeHTML(String(a))}</span>`).join(' ') : ''}</div>
+                                <div class="key">URL</div><div>${t.url ? `<a class="link" href="${escapeAttr(t.url)}" target="_blank" rel="noopener">Open Image ↗</a>` : '-'}</div>
+                                <div class="key">Added</div><div>${(() => { const v = normalizeDateValue('added', t.added); return v ? escapeHTML(String(v)) : '-'; })()}</div>
+                                <div class="key">Updated</div><div>${(() => { const v = normalizeDateValue('updated', t.updated); return v ? escapeHTML(String(v)) : '-'; })()}</div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+
+        document.getElementById('details-panel')?.classList.add('open');
+    }
+
     async function initialize() {
-        // Load configuration first
         await loadConfig();
-        
-        initializeColumnResizing();
-        initializeColumnSorting();
         initializeMultiSelect();
-        initializeSelection();
-        setupEventListeners();
-        updateActiveFiltersDisplay();
-        updateSortIndicators();
+        setupEvents();
+        ['series','contentType','availability','features','cmaf','season','episode','columns'].forEach(updateButtonText);
         await loadFilters();
         await loadData();
+        document.getElementById('details-panel')?.classList.remove('open');
     }
 
-    // Make functions globally available for onclick handlers
-    window.copyToClipboard = copyToClipboard;
-    window.toggleRowSelection = toggleRowSelection;
-
-    // Start the dashboard
     initialize();
 </script>
 </body>

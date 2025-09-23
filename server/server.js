@@ -64,7 +64,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Lightweight in-memory window rate limiter (per-process)
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
-const RATE_LIMIT_DEFAULT_MAX = 100;
+const RATE_LIMIT_DEFAULT_MAX = 200;
 const RATE_LIMIT_UPLOAD_MAX = Number(process.env.UPLOAD_RATE_LIMIT_MAX || 3);
 const UPLOAD_RATE_LIMIT_WINDOW_MS = Number(process.env.UPLOAD_RATE_LIMIT_WINDOW_MS || (2 * 60 * 1000));
 const rateBuckets = new Map();
@@ -154,7 +154,10 @@ app.get('/api/items', rateLimit(), async (req, res) => {
             SELECT
                 id, external_id, guid, title, series_title, season_number, episode_number,
                 content_type, availability_state, countries, premium_features,
-                updated_timestamp, added_timestamp, created_at, updated_at
+                updated_timestamp, added_timestamp, created_at, updated_at,
+                provider, description, available_date, expiration_date, ratings,
+                youtube_video_ids, primary_category_name, primary_category_id,
+                source_partner, video_id, pub_date, content, thumbnails
             FROM media_items
                      ${whereClause}
             ORDER BY ${sortBy} ${sortOrder}
@@ -222,39 +225,86 @@ const initDbHandler = async (req, res) => {
 
         await client.query(`
             CREATE TABLE IF NOT EXISTS media_items (
-                                                       id SERIAL PRIMARY KEY,
-                                                       external_id TEXT UNIQUE,
-                                                       guid TEXT,
-                                                       title TEXT,
-                                                       series_title TEXT,
-                                                       season_number INTEGER,
-                                                       episode_number INTEGER,
-                                                       content_type TEXT,
-                                                       availability_state TEXT,
-                                                       countries TEXT[],
-                                                       premium_features TEXT[],
-                                                       updated_timestamp BIGINT,
-                                                       added_timestamp BIGINT,
-                                                       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                                                       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                id SERIAL PRIMARY KEY,
+                external_id TEXT UNIQUE,
+                guid TEXT,
+                title TEXT,
+                series_title TEXT,
+                season_number INTEGER,
+                episode_number INTEGER,
+                content_type TEXT,
+                availability_state TEXT,
+                countries TEXT[],
+                premium_features TEXT[],
+                updated_timestamp BIGINT,
+                added_timestamp BIGINT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                provider TEXT,
+                description TEXT,
+                available_date TIMESTAMP NULL,
+                expiration_date TIMESTAMP NULL,
+                ratings JSONB,
+                youtube_video_ids TEXT[],
+                primary_category_name TEXT,
+                primary_category_id TEXT,
+                source_partner TEXT,
+                video_id TEXT,
+                pub_date TIMESTAMP NULL,
+                content JSONB,
+                thumbnails JSONB,
+                cbs JSONB,
+                ytcp JSONB,
+                yt JSONB,
+                msn JSONB,
+                pl2 JSONB
             );
 
+            -- Ensure columns exist on existing installations
+            ALTER TABLE media_items ADD COLUMN IF NOT EXISTS provider TEXT;
+            ALTER TABLE media_items ADD COLUMN IF NOT EXISTS description TEXT;
+            ALTER TABLE media_items ADD COLUMN IF NOT EXISTS available_date TIMESTAMP NULL;
+            ALTER TABLE media_items ADD COLUMN IF NOT EXISTS expiration_date TIMESTAMP NULL;
+            ALTER TABLE media_items ADD COLUMN IF NOT EXISTS ratings JSONB;
+            ALTER TABLE media_items ADD COLUMN IF NOT EXISTS youtube_video_ids TEXT[];
+            ALTER TABLE media_items ADD COLUMN IF NOT EXISTS primary_category_name TEXT;
+            ALTER TABLE media_items ADD COLUMN IF NOT EXISTS primary_category_id TEXT;
+            ALTER TABLE media_items ADD COLUMN IF NOT EXISTS source_partner TEXT;
+            ALTER TABLE media_items ADD COLUMN IF NOT EXISTS video_id TEXT;
+            ALTER TABLE media_items ADD COLUMN IF NOT EXISTS pub_date TIMESTAMP NULL;
+            ALTER TABLE media_items ADD COLUMN IF NOT EXISTS content JSONB;
+            ALTER TABLE media_items ADD COLUMN IF NOT EXISTS thumbnails JSONB;
+            ALTER TABLE media_items ADD COLUMN IF NOT EXISTS cbs JSONB;
+            ALTER TABLE media_items ADD COLUMN IF NOT EXISTS ytcp JSONB;
+            ALTER TABLE media_items ADD COLUMN IF NOT EXISTS yt JSONB;
+            ALTER TABLE media_items ADD COLUMN IF NOT EXISTS msn JSONB;
+            ALTER TABLE media_items ADD COLUMN IF NOT EXISTS pl2 JSONB;
+
             CREATE TABLE IF NOT EXISTS media_items_staging (
-                                                               id TEXT,
-                                                               guid TEXT,
-                                                               updated TEXT,
-                                                               title TEXT,
-                                                               added TEXT,
-                                                               countries TEXT,
-                                                               availabilityState TEXT,
-                                                               episode_number TEXT,
-                                                               omit TEXT,
-                                                               primary_category_id TEXT,
-                                                               primary_category_name TEXT,
-                                                               season_number TEXT,
-                                                               series_title TEXT,
-                                                               content_type TEXT,
-                                                               premium_features TEXT
+                id TEXT,
+                guid TEXT,
+                title TEXT,
+                series_title TEXT,
+                season_number TEXT,
+                episode_number TEXT,
+                content_type TEXT,
+                availabilityState TEXT,
+                countries TEXT,
+                premium_features TEXT,
+                updated TEXT,
+                added TEXT,
+                provider TEXT,
+                description TEXT,
+                availableDate TEXT,
+                expirationDate TEXT,
+                ratings TEXT,
+                pubDate TEXT,
+                primary_category_name TEXT,
+                primary_category_id TEXT,
+                source_partner TEXT,
+                video_id TEXT,
+                youtube_video_ids TEXT,
+                raw_row JSONB
             );
 
             CREATE INDEX IF NOT EXISTS idx_media_items_title ON media_items(title);
@@ -270,8 +320,85 @@ const initDbHandler = async (req, res) => {
       DECLARE
         inserted_count INTEGER := 0;
         rec RECORD;
+        v_countries TEXT[];
+        v_premium TEXT[];
+        v_ratings JSONB;
+        v_youtube_ids TEXT[];
+        v_available TIMESTAMP;
+        v_expiration TIMESTAMP;
+        v_updated BIGINT;
+        v_added BIGINT;
+        v_pubdate TIMESTAMP;
+        v_content JSONB;
+        v_thumbs JSONB;
+        v_cbs JSONB;
+        v_ytcp JSONB;
+        v_yt JSONB;
+        v_msn JSONB;
+        v_pl2 JSONB;
       BEGIN
         FOR rec IN SELECT * FROM media_items_staging LOOP
+          -- Countries/premium features may come as JSON string arrays or comma strings
+          BEGIN
+            v_countries := CASE
+              WHEN rec.countries ~ '^\\s*\\[' THEN (SELECT array_agg(elem::text) FROM jsonb_array_elements_text(rec.countries::jsonb) elem)
+              WHEN rec.countries IS NULL OR rec.countries = '' THEN NULL
+              ELSE string_to_array(rec.countries, ',')
+            END;
+          EXCEPTION WHEN others THEN v_countries := string_to_array(rec.countries, ',');
+          END;
+
+          BEGIN
+            v_premium := CASE
+              WHEN rec.premium_features ~ '^\\s*\\[' THEN (SELECT array_agg(elem::text) FROM jsonb_array_elements_text(rec.premium_features::jsonb) elem)
+              WHEN rec.premium_features IS NULL OR rec.premium_features = '' THEN NULL
+              ELSE string_to_array(rec.premium_features, ',')
+            END;
+          EXCEPTION WHEN others THEN v_premium := string_to_array(rec.premium_features, ',');
+          END;
+
+          BEGIN
+            v_ratings := NULLIF(rec.ratings, '')::jsonb;
+          EXCEPTION WHEN others THEN v_ratings := NULL;
+          END;
+
+          -- ytcp$youTubeVideoIds may be a map like {"9287":"abc"}; flatten to array of values
+          BEGIN
+            IF rec.youtube_video_ids IS NULL OR rec.youtube_video_ids = '' THEN
+              v_youtube_ids := NULL;
+            ELSIF rec.youtube_video_ids ~ '^\\s*\\{' THEN
+              v_youtube_ids := ARRAY(
+                SELECT value::text
+                FROM jsonb_each_text(rec.youtube_video_ids::jsonb)
+              );
+            ELSIF rec.youtube_video_ids ~ '^\\s*\\[' THEN
+              v_youtube_ids := (SELECT array_agg(elem::text) FROM jsonb_array_elements_text(rec.youtube_video_ids::jsonb) elem);
+            ELSE
+              v_youtube_ids := string_to_array(rec.youtube_video_ids, ',');
+            END IF;
+          EXCEPTION WHEN others THEN v_youtube_ids := string_to_array(rec.youtube_video_ids, ',');
+          END;
+
+          -- timestamps: try ISO8601 first, fallback NULL
+          BEGIN v_available := NULLIF(rec.availableDate,'')::timestamp; EXCEPTION WHEN others THEN v_available := NULL; END;
+          BEGIN v_expiration := NULLIF(rec.expirationDate,'')::timestamp; EXCEPTION WHEN others THEN v_expiration := NULL; END;
+          BEGIN v_pubdate := NULLIF(rec.pubDate,'')::timestamp; EXCEPTION WHEN others THEN v_pubdate := NULL; END;
+
+          -- numeric millis if provided
+          BEGIN v_updated := CASE WHEN rec.updated ~ '^\\d+$' THEN rec.updated::bigint ELSE NULL END; EXCEPTION WHEN others THEN v_updated := NULL; END;
+          BEGIN v_added := CASE WHEN rec.added ~ '^\\d+$' THEN rec.added::bigint ELSE NULL END; EXCEPTION WHEN others THEN v_added := NULL; END;
+
+          -- Extract nested arrays/content/thumbnail blocks from raw_row by prefix grouping if present upstream
+          v_content := COALESCE(rec.raw_row->'content', NULL);
+          v_thumbs := COALESCE(rec.raw_row->'thumbnails', NULL);
+
+          -- Buckets for vendor namespaces (keep everything)
+          v_cbs := COALESCE(rec.raw_row->'cbs', NULL);
+          v_ytcp := COALESCE(rec.raw_row->'ytcp', NULL);
+          v_yt := COALESCE(rec.raw_row->'yt', NULL);
+          v_msn := COALESCE(rec.raw_row->'msn', NULL);
+          v_pl2 := COALESCE(rec.raw_row->'pl2', NULL);
+
           INSERT INTO media_items (
             external_id,
             guid,
@@ -284,7 +411,21 @@ const initDbHandler = async (req, res) => {
             countries,
             premium_features,
             updated_timestamp,
-            added_timestamp
+            added_timestamp,
+            provider,
+            description,
+            available_date,
+            expiration_date,
+            ratings,
+            youtube_video_ids,
+            primary_category_name,
+            primary_category_id,
+            source_partner,
+            video_id,
+            pub_date,
+            content,
+            thumbnails,
+            cbs, ytcp, yt, msn, pl2
           ) VALUES (
             rec.id,
             rec.guid,
@@ -294,10 +435,24 @@ const initDbHandler = async (req, res) => {
             CASE WHEN rec.episode_number ~ '^\\d+(\\.\\d+)?$' THEN rec.episode_number::NUMERIC::INTEGER ELSE NULL END,
             rec.content_type,
             rec.availabilityState,
-            string_to_array(rec.countries, ','),
-            string_to_array(rec.premium_features, ','),
-            CASE WHEN rec.updated ~ '^\\d+$' THEN rec.updated::BIGINT ELSE NULL END,
-            CASE WHEN rec.added ~ '^\\d+$' THEN rec.added::BIGINT ELSE NULL END
+            v_countries,
+            v_premium,
+            v_updated,
+            v_added,
+            rec.provider,
+            rec.description,
+            v_available,
+            v_expiration,
+            v_ratings,
+            v_youtube_ids,
+            rec.primary_category_name,
+            rec.primary_category_id,
+            rec.source_partner,
+            rec.video_id,
+            v_pubdate,
+            v_content,
+            v_thumbs,
+            v_cbs, v_ytcp, v_yt, v_msn, v_pl2
           )
           ON CONFLICT (external_id) DO UPDATE SET
             guid = EXCLUDED.guid,
@@ -311,6 +466,24 @@ const initDbHandler = async (req, res) => {
             premium_features = EXCLUDED.premium_features,
             updated_timestamp = EXCLUDED.updated_timestamp,
             added_timestamp = EXCLUDED.added_timestamp,
+            provider = EXCLUDED.provider,
+            description = EXCLUDED.description,
+            available_date = EXCLUDED.available_date,
+            expiration_date = EXCLUDED.expiration_date,
+            ratings = EXCLUDED.ratings,
+            youtube_video_ids = EXCLUDED.youtube_video_ids,
+            primary_category_name = EXCLUDED.primary_category_name,
+            primary_category_id = EXCLUDED.primary_category_id,
+            source_partner = EXCLUDED.source_partner,
+            video_id = EXCLUDED.video_id,
+            pub_date = EXCLUDED.pub_date,
+            content = EXCLUDED.content,
+            thumbnails = EXCLUDED.thumbnails,
+            cbs = EXCLUDED.cbs,
+            ytcp = EXCLUDED.ytcp,
+            yt = EXCLUDED.yt,
+            msn = EXCLUDED.msn,
+            pl2 = EXCLUDED.pl2,
             updated_at = CURRENT_TIMESTAMP;
 
           inserted_count := inserted_count + 1;
@@ -352,40 +525,141 @@ const upload = multer({
 
 const insertBatchIntoStaging = async (client, rows) => {
     if (!rows.length) return;
+
     const cols = [
-        'id', 'guid', 'updated', 'title', 'added', 'countries', 'availabilityState',
-        'episode_number', 'omit', 'primary_category_id', 'primary_category_name',
-        'season_number', 'series_title', 'content_type', 'premium_features'
+        'id','guid','title','series_title','season_number','episode_number',
+        'content_type','availabilityState','countries','premium_features',
+        'updated','added','provider','description','availableDate','expirationDate',
+        'ratings','pubDate','primary_category_name','primary_category_id',
+        'source_partner','video_id','youtube_video_ids','raw_row'
     ];
+
+    const safeJson = (v) => {
+        if (v === undefined || v === null || v === '') return null;
+        try { return JSON.parse(v); } catch { return null; }
+    };
+
+    const parseArrayish = (v) => {
+        if (v == null) return null;
+        let s = typeof v === 'string' ? v.trim() : String(v);
+        if (!s) return null;
+
+        // Try JSON array first
+        try {
+            const j = JSON.parse(s);
+            if (Array.isArray(j)) {
+                return j.map(x => String(x).trim()).filter(Boolean).join(',');
+            }
+        } catch {}
+
+        // Handle artifacts like "] [" or "][" from concatenated arrays, strip wrapping brackets/quotes
+        s = s
+            .replace(/\]\s*\[/g, ',')           // "] [" or "]["
+            .replace(/^[\[\(\{]+|[\]\)\}]+$/g, '') // outer brackets/braces
+            .replace(/["']/g, '');                // remove quotes
+
+        // Normalize common separators to comma
+        s = s.replace(/[;|/]+/g, ',');
+        // Normalize spaces around commas and collapse multiples
+        s = s.replace(/\s*,\s*/g, ',').replace(/\s+/g, ' ');
+
+        const parts = s.split(',').map(x => x.trim()).filter(Boolean);
+        if (!parts.length) return null;
+        return parts.join(',');
+    };
+
+    // Group raw columns by namespace and arrays for downstream JSONB convenience
+    const mungeRaw = (r) => {
+        const raw = {};
+        const contentArr = [];
+        const thumbsArr = [];
+        const cbs = {};
+        const ytcp = {};
+        const yt = {};
+        const msn = {};
+        const pl2 = {};
+
+        for (const [k, v] of Object.entries(r)) {
+            if (k.startsWith('content[')) {
+                const m = k.match(/^content\[(\d+)\]\.(.+)$/);
+                if (m) {
+                    const idx = Number(m[1]);
+                    contentArr[idx] = contentArr[idx] || {};
+                    contentArr[idx][m[2]] = v;
+                }
+                continue;
+            }
+            if (k.startsWith('thumbnails[')) {
+                const m = k.match(/^thumbnails\[(\d+)\]\.(.+)$/);
+                if (m) {
+                    const idx = Number(m[1]);
+                    thumbsArr[idx] = thumbsArr[idx] || {};
+                    thumbsArr[idx][m[2]] = v;
+                }
+                continue;
+            }
+            if (k.startsWith('cbs$')) { cbs[k.slice(4)] = v; continue; }
+            if (k.startsWith('ytcp$')) { ytcp[k.slice(5)] = v; continue; }
+            if (k.startsWith('yt$')) { yt[k.slice(3)] = v; continue; }
+            if (k.startsWith('msn$')) { msn[k.slice(4)] = v; continue; }
+            if (k.startsWith('pl2$')) { pl2[k.slice(4)] = v; continue; }
+            raw[k] = v;
+        }
+        if (contentArr.length) raw.content = contentArr;
+        if (thumbsArr.length) raw.thumbnails = thumbsArr;
+        if (Object.keys(cbs).length) raw.cbs = cbs;
+        if (Object.keys(ytcp).length) raw.ytcp = ytcp;
+        if (Object.keys(yt).length) raw.yt = yt;
+        if (Object.keys(msn).length) raw.msn = msn;
+        if (Object.keys(pl2).length) raw.pl2 = pl2;
+
+        return raw;
+    };
 
     const values = [];
     const params = [];
     let p = 1;
+
     for (const r of rows) {
-        const rec = {
+        const countries = parseArrayish(r.countries);
+        const premium = parseArrayish(r['cbs$premiumFeatures'] ?? r.premium_features);
+        const youtubeIdsRaw = r['ytcp$youTubeVideoIds'];
+
+        const record = {
             id: r.id ?? null,
             guid: r.guid ?? null,
-            updated: r.updated ?? null,
             title: r.title ?? null,
-            added: r.added ?? null,
-            countries: r.countries ?? null,
-            availabilityState: r.availabilityState ?? null,
-            episode_number: r['cbs$EpisodeNumber'] ?? r.episode_number ?? null,
-            omit: r['cbs$Omit'] ?? r.omit ?? null,
-            primary_category_id: r['cbs$PrimaryCategory'] ?? r.primary_category_id ?? null,
-            primary_category_name: r['cbs$PrimaryCategoryName'] ?? r.primary_category_name ?? null,
-            season_number: r['cbs$SeasonNumber'] ?? r.season_number ?? null,
             series_title: r['cbs$SeriesTitle'] ?? r.series_title ?? null,
+            season_number: r['cbs$SeasonNumber'] ?? r.season_number ?? null,
+            episode_number: r['cbs$EpisodeNumber'] ?? r.episode_number ?? null,
             content_type: r['cbs$contentType'] ?? r.content_type ?? null,
-            premium_features: r['cbs$premiumFeatures'] ?? r.premium_features ?? null
+            availabilityState: r.availabilityState ?? null,
+            countries,
+            premium_features: premium,
+            updated: r.updated ?? null,
+            added: r.added ?? null,
+            provider: r.provider ?? null,
+            description: r.description ?? null,
+            availableDate: r.availableDate ?? null,
+            expirationDate: r.expirationDate ?? null,
+            ratings: r.ratings ?? null,
+            pubDate: r.pubDate ?? null,
+            primary_category_name: r['cbs$PrimaryCategoryName'] ?? null,
+            primary_category_id: r['cbs$PrimaryCategory'] ?? null,
+            source_partner: r['cbs$SourcePartner'] ?? null,
+            video_id: r['cbs$VideoID'] ?? null,
+            youtube_video_ids: youtubeIdsRaw ?? null,
+            raw_row: JSON.stringify(mungeRaw(r))
         };
 
         values.push(`(${cols.map(() => `$${p++}`).join(',')})`);
         params.push(
-            rec.id, rec.guid, rec.updated, rec.title, rec.added, rec.countries,
-            rec.availabilityState, rec.episode_number, rec.omit, rec.primary_category_id,
-            rec.primary_category_name, rec.season_number, rec.series_title,
-            rec.content_type, rec.premium_features
+            record.id, record.guid, record.title, record.series_title, record.season_number,
+            record.episode_number, record.content_type, record.availabilityState, record.countries,
+            record.premium_features, record.updated, record.added, record.provider, record.description,
+            record.availableDate, record.expirationDate, record.ratings, record.pubDate,
+            record.primary_category_name, record.primary_category_id, record.source_partner,
+            record.video_id, record.youtube_video_ids, record.raw_row
         );
     }
 
@@ -409,7 +683,9 @@ app.post('/api/import/csv', rateLimit(RATE_LIMIT_UPLOAD_MAX, UPLOAD_RATE_LIMIT_W
 
         const BATCH_SIZE = 500;
         let batch = [];
-        const stream = fs.createReadStream(filePath).pipe(csvParser());
+        const stream = fs.createReadStream(filePath).pipe(csvParser({
+            mapHeaders: ({ header }) => header?.trim()
+        }));
 
         await new Promise((resolve, reject) => {
             stream.on('data', async (row) => {

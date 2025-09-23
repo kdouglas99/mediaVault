@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>History Admin - Media Vault</title>
+    <!-- Suppress noisy extension-originated console errors (e.g., background-redux-new.js) -->
+    <script src="/js/ignore-extension-errors.js"></script>
     <style>
         /* Design tokens matching App.css */
         :root {
@@ -161,14 +163,6 @@
             background: var(--primary-hover);
         }
 
-        .btn-danger {
-            background: var(--danger);
-            color: white;
-        }
-
-        .btn-danger:hover {
-            background: var(--danger-hover);
-        }
 
         .btn-secondary {
             background: var(--surface-2);
@@ -256,26 +250,31 @@
             z-index: 2;
         }
 
+        /* noinspection CssUnusedSymbol */
         .timeline-marker.create {
             background: var(--accent);
             color: white;
         }
 
+        /* noinspection CssUnusedSymbol */
         .timeline-marker.update {
             background: var(--primary);
             color: white;
         }
 
+        /* noinspection CssUnusedSymbol */
         .timeline-marker.delete {
             background: var(--danger);
             color: white;
         }
 
+        /* noinspection CssUnusedSymbol */
         .timeline-marker.toggle {
             background: var(--warning);
             color: white;
         }
 
+        /* noinspection CssUnusedSymbol */
         .timeline-marker.import {
             background: var(--info);
             color: white;
@@ -695,7 +694,11 @@
             const response = await fetch(`${API_BASE}/history?${params}`);
 
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                console.error('History API HTTP error', response.status);
+                showError('Failed to load history: HTTP ' + response.status);
+                isLoading = false;
+                showLoading(false);
+                return;
             }
 
             const result = await response.json();
@@ -711,7 +714,11 @@
                 updateStats();
                 showContent();
             } else {
-                throw new Error(result.error || 'Failed to load history');
+                console.error('History API error response', result.error);
+                showError('Failed to load history: ' + (result.error || 'Unknown error'));
+                isLoading = false;
+                showLoading(false);
+                return;
             }
         } catch (error) {
             console.error('History loading error:', error);
@@ -924,7 +931,9 @@
             const response = await fetch(`${API_BASE}/history/export?${params}`);
 
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                console.error('Export history HTTP error', response.status);
+                alert('Export failed: HTTP ' + response.status);
+                return;
             }
 
             const blob = await response.blob();
