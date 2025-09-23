@@ -2135,41 +2135,38 @@
         }
     }
 
-    // Load configuration from backend
+    // Load configuration first
     async function loadConfig() {
-        const possibleUrls = [
-            // Try current origin first (in case of proxy)
-            '/api/config',
-            // Try backend port specifically
-            `${window.location.protocol}//${window.location.hostname}:3001/api/config`,
-            // Try localhost for development
-            'http://localhost:3001/api/config',
-            // Try the specific IP you mentioned
-            'http://10.21.16.43:3001/api/config'
-        ];
-
-        for (const url of possibleUrls) {
-            try {
-                console.log(`Trying config URL: ${url}`);
-                const response = await fetch(url);
-                if (response.ok) {
-                    const result = await response.json();
-                    if (result.success) {
-                        API_BASE = result.config.API_BASE;
-                        console.log(`✅ Loaded API_BASE from ${url}:`, API_BASE);
-                        return;
-                    }
+        try {
+            // Try to get config from current origin first
+            const response = await fetch('/api/config');
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success) {
+                    API_BASE = result.config.API_BASE;
+                    return;
                 }
-            } catch (error) {
-                console.warn(`❌ Failed to load config from ${url}:`, error.message);
             }
+        } catch (error) {
+            console.warn('Failed to load config from current origin, trying localhost');
         }
         
-        // Final fallback - construct based on current location
-        const hostname = window.location.hostname;
-        const protocol = window.location.protocol;
-        API_BASE = `${protocol}//${hostname}:3001/api`;
-        console.log('🔧 Using constructed fallback API_BASE:', API_BASE);
+        // Fallback to localhost for development
+        try {
+            const response = await fetch('http://localhost:3001/api/config');
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success) {
+                    API_BASE = result.config.API_BASE;
+                    return;
+                }
+            }
+        } catch (error) {
+            console.warn('Failed to load config from localhost');
+        }
+        
+        // Final fallback
+        API_BASE = 'http://localhost:3001/api';
     }
 
     // Updated initialize function
