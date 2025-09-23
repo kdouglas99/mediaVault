@@ -8,12 +8,35 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// Load environment variables
-dotenv.config();
-
 // Setup __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Load environment variables from .env. Prefer project root ../.env, then local .env, without overriding existing env (e.g., from Docker)
+try {
+    const envCandidates = [
+        path.resolve(__dirname, '../.env'),
+        path.resolve(__dirname, '.env'),
+        path.resolve(process.cwd(), '.env')
+    ];
+    let loadedPath = null;
+    for (const p of envCandidates) {
+        if (fs.existsSync(p)) {
+            dotenv.config({ path: p, override: false });
+            loadedPath = p;
+            break;
+        }
+    }
+    if (loadedPath) {
+        console.log(new Date().toISOString(), '[INFO]', 'Loaded environment variables from file', { path: loadedPath });
+    } else {
+        // Fallback to default behavior (search based on CWD)
+        dotenv.config();
+        console.warn(new Date().toISOString(), '[WARN]', 'No .env file found in expected locations; relying on process environment');
+    }
+} catch (e) {
+    console.error(new Date().toISOString(), '[ERROR]', 'Failed to load .env file', { error: e.message });
+}
 
 // Basic console logger (non-blocking)
 const logger = {
