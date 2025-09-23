@@ -804,13 +804,13 @@
             }
         } catch {}
         try {
-            const r = await fetch('http://localhost:3001/api/config');
+            const r = await fetch('http://10.21.16.43:3001/api/config');
             if (r.ok) {
                 const j = await r.json();
                 if (j.success) { API_BASE = j.config.API_BASE; return; }
             }
         } catch {}
-        API_BASE = 'http://localhost:3001/api';
+        API_BASE = 'http://10.21.16.43:3001/api';
     }
 
     // Data loading
