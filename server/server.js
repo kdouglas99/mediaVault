@@ -6,6 +6,7 @@ import csvParser from 'csv-parser';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import cors from 'cors';
 import { corsOptions, helmetConfig, createRateLimit, validateFileUpload, requestLogger, errorHandler } from './middleware/security.js';
 import { validateCSVImport, validateItemsQuery, validateDBInit, sanitizeInput } from './middleware/validation.js';
 
@@ -817,7 +818,6 @@ app.post('/api/import/csv', rateLimit(RATE_LIMIT_UPLOAD_MAX, UPLOAD_RATE_LIMIT_W
         });
 
         fs.unlink(filePath, () => {});
-        rateBuckets.delete(ip);
 
         res.json({ success: true, message: 'CSV imported successfully' });
     } catch (error) {
