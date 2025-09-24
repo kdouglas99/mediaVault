@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { testConnection, getItems, getStats, importCSV, initializeDatabase } from './lib/database'
+import ErrorBoundary from './components/ErrorBoundary'
 import './App.css'
 
 interface MediaItem {
@@ -108,8 +109,9 @@ const handleFileUpload = async () => {
   };
 
   return (
-    <div className="App">
-      <h1>🎬 Media Vault</h1>
+    <ErrorBoundary>
+      <div className="App">
+        <h1>🎬 Media Vault</h1>
       
       <div className="card">
         <h2>📡 Database Status</h2>
@@ -227,7 +229,8 @@ const handleFileUpload = async () => {
           <p>No media items found. Upload a CSV file above to import your data.</p>
         )}
       </div>
-    </div>
+      </div>
+    </ErrorBoundary>
   )
 }
 

@@ -1,5 +1,4 @@
 import express from 'express';
-import cors from 'cors';
 import dotenv from 'dotenv';
 import pg from 'pg';
 import multer from 'multer';
@@ -7,6 +6,8 @@ import csvParser from 'csv-parser';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { corsOptions, helmetConfig, createRateLimit, validateFileUpload, requestLogger, errorHandler } from './middleware/security.js';
+import { validateCSVImport, validateItemsQuery, validateDBInit, sanitizeInput } from './middleware/validation.js';
 
 // Setup __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -63,22 +64,43 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 app.set('trust proxy', 1); // so req.ip is correct behind proxies
 
-// Database pool
+// Database pool with improved configuration
 const pool = new Pool({
     host: process.env.DB_HOST,
     port: Number(process.env.DB_PORT),
     database: process.env.DB_NAME,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-    max: 20,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 5000,
-    maxUses: 7500
+    max: Number(process.env.DB_POOL_MAX || 20),
+    idleTimeoutMillis: Number(process.env.DB_POOL_IDLE_TIMEOUT || 30000),
+    connectionTimeoutMillis: Number(process.env.DB_CONNECTION_TIMEOUT || 5000),
+    maxUses: Number(process.env.DB_MAX_USES || 7500),
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
 pool.on('error', (err) => {
     logger.error('Unexpected error on idle client', { error: err.message, stack: err.stack });
 });
+
+// Enhanced connection retry logic
+const connectWithRetry = async (maxRetries = 5, delay = 1000) => {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            const client = await pool.connect();
+            await client.query('SELECT 1');
+            client.release();
+            logger.info('Database connection established successfully');
+            return true;
+        } catch (err) {
+            logger.warn(`Database connection attempt ${attempt} failed`, { error: err.message });
+            if (attempt === maxRetries) {
+                logger.error('All database connection attempts failed');
+                throw err;
+            }
+            await new Promise(resolve => setTimeout(resolve, delay * attempt));
+        }
+    }
+};
 
 // Initialize database schema from schema.sql (idempotent, with retries)
 let dbInitialized = false;
@@ -122,32 +144,22 @@ const initDatabase = async () => {
     throw lastError || new Error('Database initialization failed');
 };
 
-// Middleware
-app.use(cors());
+// Security middleware
+app.use(helmetConfig);
+app.use(cors(corsOptions));
+app.use(requestLogger);
+
+// Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Lightweight in-memory window rate limiter (per-process)
-const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
-const RATE_LIMIT_DEFAULT_MAX = 200;
+// Input sanitization
+app.use(sanitizeInput);
+
+// Rate limiting
+const rateLimit = createRateLimit();
 const RATE_LIMIT_UPLOAD_MAX = Number(process.env.UPLOAD_RATE_LIMIT_MAX || 3);
 const UPLOAD_RATE_LIMIT_WINDOW_MS = Number(process.env.UPLOAD_RATE_LIMIT_WINDOW_MS || (2 * 60 * 1000));
-const rateBuckets = new Map();
-
-const rateLimit = (maxRequests = RATE_LIMIT_DEFAULT_MAX, windowMs = RATE_LIMIT_WINDOW_MS) => (req, res, next) => {
-    if (req.method === 'OPTIONS') return next();
-    const now = Date.now();
-    const ip = req.ip || req.socket?.remoteAddress || 'unknown';
-    const bucket = rateBuckets.get(ip) || [];
-    const cutoff = now - windowMs;
-    const pruned = bucket.filter((t) => t > cutoff);
-    if (pruned.length >= maxRequests) {
-        return res.status(429).json({ success: false, error: 'Too many requests from this IP, please try again later.' });
-    }
-    pruned.push(now);
-    rateBuckets.set(ip, pruned);
-    next();
-};
 
 // Health check (used by Docker HEALTHCHECK)
 app.get('/health', rateLimit(), async (req, res) => {
@@ -204,7 +216,7 @@ const parseListParams = (query) => {
 };
 
 // Get all media items - server returns ALL data, frontend handles pagination and filtering
-app.get('/api/items', rateLimit(), async (req, res) => {
+app.get('/api/items', rateLimit(), validateItemsQuery, async (req, res) => {
     let client;
     try {
         const { search, sortBy, sortOrder } = parseListParams(req.query);
@@ -578,7 +590,7 @@ const initDbHandler = async (req, res) => {
     }
 };
 
-app.post('/api/init-db', rateLimit(), initDbHandler);
+app.post('/api/init-db', rateLimit(), validateDBInit, initDbHandler);
 app.get('/api/init-db', rateLimit(), initDbHandler);
 
 // CSV Import functionality
@@ -587,14 +599,27 @@ await fs.promises.mkdir(uploadsDir, { recursive: true }).catch(() => {});
 
 const upload = multer({
     dest: uploadsDir,
-    limits: { fileSize: 50 * 1024 * 1024, files: 1 },
+    limits: { 
+        fileSize: Number(process.env.MAX_FILE_SIZE || 50 * 1024 * 1024), 
+        files: 1 
+    },
     fileFilter: (req, file, cb) => {
-        const ok =
-            file.mimetype === 'text/csv' ||
-            file.mimetype === 'application/vnd.ms-excel' ||
-            file.originalname.toLowerCase().endsWith('.csv');
-        if (ok) cb(null, true);
-        else cb(new Error('Only CSV files are allowed'));
+        const allowedMimeTypes = [
+            'text/csv',
+            'application/csv',
+            'text/plain',
+            'application/vnd.ms-excel'
+        ];
+        
+        const fileExtension = file.originalname.toLowerCase().substring(file.originalname.lastIndexOf('.'));
+        const isCSV = fileExtension === '.csv';
+        const isValidMimeType = allowedMimeTypes.includes(file.mimetype);
+        
+        if (isCSV && isValidMimeType) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only CSV files are allowed'));
+        }
     }
 });
 
@@ -742,7 +767,7 @@ const insertBatchIntoStaging = async (client, rows) => {
     await client.query(sql, params);
 };
 
-app.post('/api/import/csv', rateLimit(RATE_LIMIT_UPLOAD_MAX, UPLOAD_RATE_LIMIT_WINDOW_MS), upload.single('csvFile'), async (req, res) => {
+app.post('/api/import/csv', rateLimit(RATE_LIMIT_UPLOAD_MAX, UPLOAD_RATE_LIMIT_WINDOW_MS), upload.single('csvFile'), validateFileUpload, validateCSVImport, async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ success: false, error: 'CSV file is required' });
     }
@@ -807,13 +832,8 @@ app.post('/api/import/csv', rateLimit(RATE_LIMIT_UPLOAD_MAX, UPLOAD_RATE_LIMIT_W
     }
 });
 
-// Error handling
-app.use((err, req, res, next) => {
-    if (err instanceof Error && (err.message.includes('CSV') || err.message.includes('File too large'))) {
-        return res.status(400).json({ success: false, error: err.message });
-    }
-    next(err);
-});
+// Error handling middleware
+app.use(errorHandler);
 
 // Debug endpoint for development
 if (process.env.NODE_ENV === 'development') {
@@ -846,6 +866,7 @@ app.use((req, res) => {
 // Start server after DB initialization
 let server;
 try {
+    await connectWithRetry();
     await initDatabase();
     server = app.listen(PORT, '0.0.0.0', () => {
         logger.info(`Server listening on port ${PORT} and bound to 0.0.0.0`);
