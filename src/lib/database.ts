@@ -1,4 +1,17 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+// Compute API base at runtime to avoid localhost being baked into production builds
+function computeApiBase(): string {
+  try {
+    const envBase = (import.meta as any)?.env?.VITE_API_URL as string | undefined;
+    if (envBase && !/^(https?:\/\/)?(localhost|127\.0\.0\.1)/i.test(envBase)) {
+      return envBase.replace(/\/$/, '');
+    }
+  } catch {}
+  const { protocol, hostname } = window.location;
+  const backendPort = (window as any).__BACKEND_PORT__ || 3001;
+  return `${protocol}//${hostname}:${backendPort}`.replace(/\/$/, '');
+}
+
+const API_URL = computeApiBase();
 
 export interface MediaItem {
   id: number;
