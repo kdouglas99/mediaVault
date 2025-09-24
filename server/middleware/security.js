@@ -49,13 +49,18 @@ export const helmetConfig = helmet({
 // Rate limiting with improved security
 export const createRateLimit = () => {
   const rateBuckets = new Map();
-  const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
-  const RATE_LIMIT_DEFAULT_MAX = 200;
+  const RATE_LIMIT_WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS || (15 * 60 * 1000)); // 15 minutes default
+  const RATE_LIMIT_DEFAULT_MAX = Number(process.env.RATE_LIMIT_MAX || 200);
   const UPLOAD_RATE_LIMIT_MAX = Number(process.env.UPLOAD_RATE_LIMIT_MAX || 3);
   const UPLOAD_RATE_LIMIT_WINDOW_MS = Number(process.env.UPLOAD_RATE_LIMIT_WINDOW_MS || (2 * 60 * 1000));
 
   return (maxRequests = RATE_LIMIT_DEFAULT_MAX, windowMs = RATE_LIMIT_WINDOW_MS) => (req, res, next) => {
     if (req.method === 'OPTIONS') return next();
+    
+    // Skip rate limiting in development mode if DISABLE_RATE_LIMIT is set
+    if (process.env.NODE_ENV === 'development' && process.env.DISABLE_RATE_LIMIT === 'true') {
+      return next();
+    }
     
     const now = Date.now();
     const ip = req.ip || req.socket?.remoteAddress || 'unknown';
