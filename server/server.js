@@ -768,7 +768,7 @@ const insertBatchIntoStaging = async (client, rows) => {
     await client.query(sql, params);
 };
 
-app.post('/api/import/csv', rateLimit(RATE_LIMIT_UPLOAD_MAX, UPLOAD_RATE_LIMIT_WINDOW_MS), upload.single('csvFile'), validateFileUpload, validateCSVImport, async (req, res) => {
+app.post('/api/import/csv', rateLimit(RATE_LIMIT_UPLOAD_MAX, UPLOAD_RATE_LIMIT_WINDOW_MS, { perPath: true }), upload.single('csvFile'), validateFileUpload, validateCSVImport, async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ success: false, error: 'CSV file is required' });
     }
