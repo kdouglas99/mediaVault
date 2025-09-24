@@ -54,7 +54,8 @@ export const createRateLimit = () => {
   const UPLOAD_RATE_LIMIT_MAX = Number(process.env.UPLOAD_RATE_LIMIT_MAX || 3);
   const UPLOAD_RATE_LIMIT_WINDOW_MS = Number(process.env.UPLOAD_RATE_LIMIT_WINDOW_MS || (2 * 60 * 1000));
 
-  return (maxRequests = RATE_LIMIT_DEFAULT_MAX, windowMs = RATE_LIMIT_WINDOW_MS) => (req, res, next) => {
+  // Return a factory that creates a middleware with optional scoping options
+  return (maxRequests = RATE_LIMIT_DEFAULT_MAX, windowMs = RATE_LIMIT_WINDOW_MS, options = {}) => (req, res, next) => {
     if (req.method === 'OPTIONS') return next();
     
     // Skip rate limiting in development mode if DISABLE_RATE_LIMIT is set
@@ -63,21 +64,57 @@ export const createRateLimit = () => {
     }
     
     const now = Date.now();
+
+    // Generate a bucket key. By default, key by IP only to preserve previous behavior.
     const ip = req.ip || req.socket?.remoteAddress || 'unknown';
-    const bucket = rateBuckets.get(ip) || [];
+    let key = ip;
+
+    // Support custom key generator or per-path scoping to avoid cross-route interference
+    if (typeof options.keyGenerator === 'function') {
+      try {
+        key = options.keyGenerator(req);
+      } catch (_) {
+        key = ip;
+      }
+    } else if (options.perPath) {
+      // Use method + path without query string for stability
+      const pathOnly = (req.baseUrl || '') + (req.path || (req.originalUrl || '').split('?')[0] || '');
+      key = `${ip}|${req.method}|${pathOnly}`;
+    }
+
+    const bucket = rateBuckets.get(key) || [];
     const cutoff = now - windowMs;
     const pruned = bucket.filter((t) => t > cutoff);
-    
+
+    // Compute headers
+    const oldest = pruned[0] ?? now;
+    const resetAt = oldest + windowMs; // ms timestamp when window resets for this key
+    const retryAfterSec = Math.max(0, Math.ceil((resetAt - now) / 1000));
+
     if (pruned.length >= maxRequests) {
-      return res.status(429).json({ 
-        success: false, 
+      // Standard rate limit headers
+      res.setHeader('Retry-After', retryAfterSec);
+      res.setHeader('X-RateLimit-Limit', String(maxRequests));
+      res.setHeader('X-RateLimit-Remaining', '0');
+      res.setHeader('X-RateLimit-Reset', String(Math.ceil(resetAt / 1000))); // unix seconds
+
+      return res.status(429).json({
+        success: false,
         error: 'Too many requests from this IP, please try again later.',
-        retryAfter: Math.ceil(windowMs / 1000)
+        retryAfter: retryAfterSec
       });
     }
-    
+
+    // Allow request and update bucket
     pruned.push(now);
-    rateBuckets.set(ip, pruned);
+    rateBuckets.set(key, pruned);
+
+    // Remaining after this allowed request
+    const remaining = Math.max(0, maxRequests - pruned.length);
+    res.setHeader('X-RateLimit-Limit', String(maxRequests));
+    res.setHeader('X-RateLimit-Remaining', String(remaining));
+    res.setHeader('X-RateLimit-Reset', String(Math.ceil(resetAt / 1000)));
+
     next();
   };
 };
