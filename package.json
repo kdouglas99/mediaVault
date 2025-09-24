@@ -17,10 +17,13 @@
     "test:integration": "vitest run tests/integration.test.js",
     "test:performance": "vitest run tests/performance.test.js",
     "test:all": "npm run test:run && cd server && npm run test:ci && cd .. && npm run test:integration",
-    "test:ci": "npm run test:run && npm run test:coverage"
+    "test:ci": "npm run test:run && npm run test:coverage",
+    "db:setup": "node scripts/init-db.js",
+    "db:reset": "./scripts/reset-database.sh",
+    "db:init": "./scripts/setup-database.sh"
   },
   "dependencies": {
-    "@types/pg": "^8.16.3",
+    "@types/pg": "^8.15.5",
     "dotenv": "^17.2.1",
     "pg": "^8.16.3",
     "react": "^19.1.1",
