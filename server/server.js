@@ -80,6 +80,48 @@ pool.on('error', (err) => {
     logger.error('Unexpected error on idle client', { error: err.message, stack: err.stack });
 });
 
+// Initialize database schema from schema.sql (idempotent, with retries)
+let dbInitialized = false;
+const initDatabase = async () => {
+    if (dbInitialized) return;
+
+    const maxAttempts = Number(process.env.INIT_DB_MAX_ATTEMPTS || 10);
+    const baseDelayMs = Number(process.env.INIT_DB_BASE_DELAY_MS || 1000);
+    const schemaPath = path.resolve(__dirname, 'schema.sql');
+
+    if (!fs.existsSync(schemaPath)) {
+        logger.warn('Database schema file not found; skipping initialization', { schemaPath });
+        dbInitialized = true;
+        return;
+    }
+
+    let lastError;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        let client;
+        try {
+            client = await pool.connect();
+            await client.query('BEGIN');
+            const schemaSql = fs.readFileSync(schemaPath, 'utf8');
+            await client.query(schemaSql);
+            await client.query('COMMIT');
+            dbInitialized = true;
+            logger.info('Database initialized successfully', { schemaPath, attempt });
+            return;
+        } catch (err) {
+            lastError = err;
+            try { await client?.query('ROLLBACK'); } catch {}
+            const delay = baseDelayMs * Math.min(8, 2 ** (attempt - 1));
+            logger.warn('Database initialization attempt failed; will retry', { attempt, maxAttempts, delayMs: delay, error: err.message });
+            if (attempt < maxAttempts) {
+                await new Promise((r) => setTimeout(r, delay));
+            }
+        }
+    }
+
+    logger.error('Database initialization failed after all retry attempts', { error: lastError?.message });
+    throw lastError || new Error('Database initialization failed');
+};
+
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
@@ -107,9 +149,19 @@ const rateLimit = (maxRequests = RATE_LIMIT_DEFAULT_MAX, windowMs = RATE_LIMIT_W
     next();
 };
 
-// Health check
-app.get('/health', rateLimit(), (req, res) => {
-    res.json({ status: 'OK', timestamp: new Date().toISOString() });
+// Health check (used by Docker HEALTHCHECK)
+app.get('/health', rateLimit(), async (req, res) => {
+    let client;
+    try {
+        client = await pool.connect();
+        await client.query('SELECT 1');
+        return res.json({ success: true, status: 'OK', db: 'reachable', initialized: dbInitialized, timestamp: new Date().toISOString() });
+    } catch (e) {
+        logger.warn('Healthcheck DB failure', { error: e.message });
+        return res.status(503).json({ success: false, status: 'DEGRADED', db: 'unreachable', initialized: dbInitialized, error: 'Database not reachable' });
+    } finally {
+        client?.release();
+    }
 });
 
 // Add this new endpoint to serve frontend configuration
@@ -791,15 +843,22 @@ app.use((req, res) => {
     res.status(404).json({ success: false, error: 'Not found' });
 });
 
-// Start server
-const server = app.listen(PORT, () => {
-    logger.info(`Server listening on port ${PORT}`);
-});
+// Start server after DB initialization
+let server;
+try {
+    await initDatabase();
+    server = app.listen(PORT, () => {
+        logger.info(`Server listening on port ${PORT}`);
+    });
+} catch (e) {
+    logger.error('Server failed to start due to database initialization error', { error: e.message });
+    process.exit(1);
+}
 
 // Graceful shutdown
 const shutdown = async () => {
     logger.info('Shutting down...');
-    server.close(async () => {
+    server?.close(async () => {
         try {
             await pool.end();
         } catch (e) {
