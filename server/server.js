@@ -847,8 +847,8 @@ app.use((req, res) => {
 let server;
 try {
     await initDatabase();
-    server = app.listen(PORT, () => {
-        logger.info(`Server listening on port ${PORT}`);
+    server = app.listen(PORT, '0.0.0.0', () => {
+        logger.info(`Server listening on port ${PORT} and bound to 0.0.0.0`);
     });
 } catch (e) {
     logger.error('Server failed to start due to database initialization error', { error: e.message });
