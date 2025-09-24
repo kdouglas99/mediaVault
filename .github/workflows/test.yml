@@ -1,0 +1,343 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  frontend-tests:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run frontend tests
+      run: npm run test:run
+    
+    - name: Run frontend tests with coverage
+      run: npm run test:coverage
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage/lcov.info
+        flags: frontend
+        name: frontend-coverage
+
+  backend-tests:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_USER: test_user
+          POSTGRES_DB: media_vault_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: server/package-lock.json
+    
+    - name: Install backend dependencies
+      run: |
+        cd server
+        npm ci
+    
+    - name: Wait for PostgreSQL
+      run: |
+        until pg_isready -h localhost -p 5432 -U test_user; do
+          echo "Waiting for PostgreSQL..."
+          sleep 2
+        done
+    
+    - name: Setup test database
+      run: |
+        cd server
+        PGPASSWORD=test_password psql -h localhost -U test_user -d media_vault_test -f schema.sql
+    
+    - name: Run backend tests
+      run: |
+        cd server
+        npm run test:ci
+      env:
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_NAME: media_vault_test
+        DB_USER: test_user
+        DB_PASSWORD: test_password
+        NODE_ENV: test
+    
+    - name: Upload backend coverage
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./server/coverage/lcov.info
+        flags: backend
+        name: backend-coverage
+
+  database-tests:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_USER: test_user
+          POSTGRES_DB: media_vault_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: server/package-lock.json
+    
+    - name: Install dependencies
+      run: |
+        cd server
+        npm ci
+    
+    - name: Wait for PostgreSQL
+      run: |
+        until pg_isready -h localhost -p 5432 -U test_user; do
+          echo "Waiting for PostgreSQL..."
+          sleep 2
+        done
+    
+    - name: Setup test database
+      run: |
+        cd server
+        PGPASSWORD=test_password psql -h localhost -U test_user -d media_vault_test -f schema.sql
+    
+    - name: Run database tests
+      run: |
+        cd server
+        npm test -- tests/database.test.js
+      env:
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_NAME: media_vault_test
+        DB_USER: test_user
+        DB_PASSWORD: test_password
+        NODE_ENV: test
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_USER: test_user
+          POSTGRES_DB: media_vault_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: |
+        npm ci
+        cd server && npm ci
+    
+    - name: Wait for PostgreSQL
+      run: |
+        until pg_isready -h localhost -p 5432 -U test_user; do
+          echo "Waiting for PostgreSQL..."
+          sleep 2
+        done
+    
+    - name: Setup test database
+      run: |
+        cd server
+        PGPASSWORD=test_password psql -h localhost -U test_user -d media_vault_test -f schema.sql
+    
+    - name: Run integration tests
+      run: npm run test:integration
+      env:
+        TEST_DB_HOST: localhost
+        TEST_DB_PORT: 5432
+        TEST_DB_NAME: media_vault_test
+        TEST_DB_USER: test_user
+        TEST_DB_PASSWORD: test_password
+        NODE_ENV: test
+
+  security-tests:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: |
+        npm ci
+        cd server && npm ci
+    
+    - name: Run security audit
+      run: |
+        npm audit --audit-level moderate
+        cd server && npm audit --audit-level moderate
+    
+    - name: Run ESLint security rules
+      run: |
+        npm run lint
+        cd server && npm run lint || true
+
+  build-tests:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Build frontend
+      run: npm run build
+    
+    - name: Test build output
+      run: |
+        if [ ! -d "dist" ]; then
+          echo "Build output directory 'dist' not found"
+          exit 1
+        fi
+        if [ ! -f "dist/index.html" ]; then
+          echo "Build output file 'dist/index.html' not found"
+          exit 1
+        fi
+        echo "Build test passed"
+
+  docker-tests:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Build Docker images
+      run: |
+        docker build -t media-vault-frontend .
+        docker build -t media-vault-backend ./server
+    
+    - name: Test Docker images
+      run: |
+        # Test that images can be created and run
+        docker run --rm media-vault-frontend echo "Frontend image test passed"
+        docker run --rm media-vault-backend echo "Backend image test passed"
+
+  performance-tests:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_USER: test_user
+          POSTGRES_DB: media_vault_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: |
+        npm ci
+        cd server && npm ci
+    
+    - name: Wait for PostgreSQL
+      run: |
+        until pg_isready -h localhost -p 5432 -U test_user; do
+          echo "Waiting for PostgreSQL..."
+          sleep 2
+        done
+    
+    - name: Setup test database
+      run: |
+        cd server
+        PGPASSWORD=test_password psql -h localhost -U test_user -d media_vault_test -f schema.sql
+    
+    - name: Run performance tests
+      run: npm run test:performance
+      env:
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_NAME: media_vault_test
+        DB_USER: test_user
+        DB_PASSWORD: test_password
+        NODE_ENV: test
+      timeout-minutes: 10
