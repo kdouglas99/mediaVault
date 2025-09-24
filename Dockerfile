@@ -20,15 +20,15 @@ FROM node:22-alpine
 
 WORKDIR /app
 
-# Install serve to serve the built application
-RUN npm install -g serve
+# Install minimal runtime dependency for static server with /api/config endpoint
+RUN npm install express
 
-# Copy built application from build stage
+# Copy built application from build stage and the custom frontend server
 COPY --from=build /app/dist ./dist
+COPY ./frontend-server.js ./frontend-server.js
 
 # Expose port
 EXPOSE 3000
 
-# Start the application without -s flag to allow static file serving
-# But we'll create a serve.json config to handle SPA routing for React routes only
-CMD ["serve", "dist", "-l", "3000"]
+# Start the custom Node server to serve static files and /api/config
+CMD ["node", "frontend-server.js"]

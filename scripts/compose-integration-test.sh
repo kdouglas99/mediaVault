@@ -14,9 +14,12 @@ if [[ ! -f .env ]]; then
   exit 1
 fi
 
-# Export env vars from .env into current shell without overriding exported ones
-# shellcheck disable=SC2046
-export $(grep -v '^#' .env | xargs -0 -I {} bash -c 'echo -n {}' 2>/dev/null || true) || true
+# Load .env into current shell (do not override already exported vars)
+# Using POSIX-compatible approach with set -a to auto-export
+# shellcheck disable=SC1091
+set -a
+. ./.env
+set +a
 
 DB_CONTAINER_NAME="media-vault-db"
 BACKEND_CONTAINER_NAME="media-vault-backend"

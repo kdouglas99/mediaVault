@@ -2,7 +2,7 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: media-vault-db
-    platform: linux/amd64
+    platform: linux/arm64
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${DB_NAME}
