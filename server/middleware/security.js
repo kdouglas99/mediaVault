@@ -1,5 +1,7 @@
 import helmet from 'helmet';
 import cors from 'cors';
+// Re-export sanitizeInput for tests expecting it from this module
+export { sanitizeInput } from './validation.js';
 
 // Configure CORS with specific origins
 export const corsOptions = {
@@ -47,12 +49,10 @@ export const helmetConfig = helmet({
 });
 
 // Rate limiting with improved security
-export const createRateLimit = () => {
+export const createRateLimit = (defaultMax, defaultWindowMs) => {
   const rateBuckets = new Map();
-  const RATE_LIMIT_WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS || (15 * 60 * 1000)); // 15 minutes default
-  const RATE_LIMIT_DEFAULT_MAX = Number(process.env.RATE_LIMIT_MAX || 200);
-  const UPLOAD_RATE_LIMIT_MAX = Number(process.env.UPLOAD_RATE_LIMIT_MAX || 3);
-  const UPLOAD_RATE_LIMIT_WINDOW_MS = Number(process.env.UPLOAD_RATE_LIMIT_WINDOW_MS || (2 * 60 * 1000));
+  const RATE_LIMIT_WINDOW_MS = Number(defaultWindowMs ?? process.env.RATE_LIMIT_WINDOW_MS ?? (15 * 60 * 1000)); // 15 minutes default
+  const RATE_LIMIT_DEFAULT_MAX = Number(defaultMax ?? process.env.RATE_LIMIT_MAX ?? 200);
 
   // Return a factory that creates a middleware with optional scoping options
   return (maxRequests = RATE_LIMIT_DEFAULT_MAX, windowMs = RATE_LIMIT_WINDOW_MS, options = {}) => (req, res, next) => {

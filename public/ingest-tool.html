@@ -53,9 +53,20 @@
             <input id="api-url" type="text" placeholder="https://example.com/api/content"/>
             <div class="muted" style="margin-top:.25rem;">Response must be JSON. Provide either an array of items or an object with an <span class="pill">items</span> array.</div>
         </div>
-        <div class="row">
-            <button id="fetch-btn" class="btn">🔄 Fetch</button>
-            <button id="clear-btn" class="btn btn-danger">🧹 Clear</button>
+        <div class="grid" style="gap:.75rem;">
+            <div>
+                <label for="headers-json">Request Headers (JSON, optional)</label>
+                <textarea id="headers-json" placeholder='{"Authorization":"Bearer ..."}'></textarea>
+            </div>
+            <div>
+                <label for="curl-input">or paste cURL (optional)</label>
+                <textarea id="curl-input" placeholder='curl -X GET "https://example.com/api" -H "Authorization: Bearer TOKEN"'></textarea>
+                <div class="muted" style="margin-top:.25rem;">If cURL is provided, it takes precedence over URL+headers.</div>
+            </div>
+            <div class="row">
+                <button id="fetch-btn" class="btn">🔄 Fetch</button>
+                <button id="clear-btn" class="btn btn-danger">🧹 Clear</button>
+            </div>
         </div>
     </div>
 
@@ -163,6 +174,8 @@ function coerceToItems(json) {
 
 const el = {
     apiUrl: document.getElementById('api-url'),
+    headersJson: document.getElementById('headers-json'),
+    curlInput: document.getElementById('curl-input'),
     fetchBtn: document.getElementById('fetch-btn'),
     clearBtn: document.getElementById('clear-btn'),
     raw: document.getElementById('raw-json'),
@@ -187,13 +200,27 @@ function renderPreview(items) {
 
 el.fetchBtn.addEventListener('click', async () => {
     const url = el.apiUrl.value.trim();
-    if (!url) { setStatus('Enter a source API URL'); return; }
+    const curl = (el.curlInput.value || '').trim();
+    let headers = undefined;
+    if (!curl && !url) { setStatus('Enter a URL or paste a cURL command'); return; }
+    if (!curl && el.headersJson.value.trim()) {
+        try { headers = JSON.parse(el.headersJson.value); }
+        catch { setStatus('Invalid headers JSON'); return; }
+    }
     setStatus('Fetching...');
     try {
-        const r = await fetch(url);
+        const payload = curl ? { curl } : { url, method: 'GET', headers };
+        const r = await fetch(`${API_BASE}/proxy/fetch`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         const j = await r.json();
-        el.raw.value = JSON.stringify(j, null, 2);
-        setStatus('Fetched');
+        if (!r.ok || !j.success) throw new Error(j.error || 'Proxy fetch failed');
+        const data = j.data ?? (j.text ? (() => { try { return JSON.parse(j.text); } catch { return null; } })() : null);
+        if (!data) {
+            setStatus('Fetched (non-JSON). Showing raw text in JSON textarea.');
+            el.raw.value = j.text || '';
+        } else {
+            el.raw.value = JSON.stringify(data, null, 2);
+            setStatus('Fetched');
+        }
     } catch (e) {
         setStatus('Fetch failed: ' + (e?.message || e));
     }

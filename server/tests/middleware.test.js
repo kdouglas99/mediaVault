@@ -369,7 +369,7 @@ describe('Error Handling Tests', () => {
   })
 
   test('should handle validation errors gracefully', (done) => {
-    const { handleValidationErrors } = require('../middleware/validation.js')
+      const { handleValidationErrors } = await import('../middleware/validation.js')
     
     app.use('/test', handleValidationErrors)
     app.get('/test', (req, res) => res.json({ success: true }))
@@ -381,7 +381,7 @@ describe('Error Handling Tests', () => {
   })
 
   test('should handle CORS errors', (done) => {
-    const { errorHandler } = require('../middleware/security.js')
+    const { errorHandler } = await import('../middleware/security.js')
     
     app.use('/test', errorHandler)
     app.get('/test', (req, res, next) => {
@@ -395,7 +395,7 @@ describe('Error Handling Tests', () => {
   })
 
   test('should handle validation errors', (done) => {
-    const { errorHandler } = require('../middleware/security.js')
+    const { errorHandler } = await import('../middleware/security.js')
     
     app.use('/test', errorHandler)
     app.get('/test', (req, res, next) => {
@@ -410,7 +410,7 @@ describe('Error Handling Tests', () => {
   })
 
   test('should handle unauthorized errors', (done) => {
-    const { errorHandler } = require('../middleware/security.js')
+    const { errorHandler } = await import('../middleware/security.js')
     
     app.use('/test', errorHandler)
     app.get('/test', (req, res, next) => {

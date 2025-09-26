@@ -203,6 +203,159 @@ app.get('/api/test', rateLimit(), async (req, res) => {
     }
 });
 
+// Lightweight proxy to fetch external JSON with optional headers
+// Accepts either { url, method, headers, body } or { curl }
+// Only allows http/https URLs and returns JSON body if possible
+app.post(
+    '/api/proxy/fetch',
+    rateLimit(),
+    [
+        body('url').optional().isString().isLength({ min: 1, max: 2048 }),
+        body('method').optional().isIn(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']).withMessage('Invalid method'),
+        body('headers').optional().isObject(),
+        body('body').optional(),
+        body('curl').optional().isString().isLength({ min: 1, max: 10000 }),
+        handleValidationErrors
+    ],
+    async (req, res) => {
+        try {
+            let targetUrl = req.body.url ? String(req.body.url) : '';
+            let method = (req.body.method || 'GET').toString().toUpperCase();
+            let headers = (req.body.headers && typeof req.body.headers === 'object') ? req.body.headers : {};
+            let bodyPayload = req.body.body ?? null;
+
+            // If cURL is provided, parse it to extract method, url, headers, and body
+            if (!targetUrl && typeof req.body.curl === 'string' && req.body.curl.trim()) {
+                const parsed = parseCurlCommand(req.body.curl);
+                if (parsed) {
+                    targetUrl = parsed.url || targetUrl;
+                    method = parsed.method || method;
+                    headers = { ...headers, ...parsed.headers };
+                    if (parsed.body !== undefined) bodyPayload = parsed.body;
+                }
+            }
+
+            if (!/^https?:\/\//i.test(targetUrl)) {
+                return res.status(400).json({ success: false, error: 'Only http/https URLs are allowed' });
+            }
+
+            // Prevent SSRF to private networks if configured
+            if (process.env.BLOCK_PRIVATE_NETWORKS === 'true') {
+                try {
+                    const u = new URL(targetUrl);
+                    // crude blocklist for localhost/loopback/private names
+                    if (/^(localhost|127\.0\.0\.1|::1)$/i.test(u.hostname)) {
+                        return res.status(400).json({ success: false, error: 'Target host is not allowed' });
+                    }
+                } catch (_) {}
+            }
+
+            // Normalize headers: drop hop-by-hop and restricted headers
+            const disallowedHeaderNames = new Set([
+                'host','connection','content-length','accept-encoding','cf-connecting-ip','x-forwarded-for','x-real-ip'
+            ]);
+            const outHeaders = {};
+            for (const [k, v] of Object.entries(headers)) {
+                const name = String(k).toLowerCase();
+                if (!disallowedHeaderNames.has(name)) {
+                    outHeaders[name] = v;
+                }
+            }
+
+            const controller = new AbortController();
+            const timeoutMs = Number(process.env.PROXY_FETCH_TIMEOUT_MS || 15000);
+            const t = setTimeout(() => controller.abort(), timeoutMs);
+
+            let fetchBody = undefined;
+            if (bodyPayload != null) {
+                if (typeof bodyPayload === 'string' || bodyPayload instanceof Buffer) {
+                    fetchBody = bodyPayload;
+                } else {
+                    fetchBody = JSON.stringify(bodyPayload);
+                    if (!outHeaders['content-type']) outHeaders['content-type'] = 'application/json';
+                }
+            }
+
+            const resp = await fetch(targetUrl, { method, headers: outHeaders, body: fetchBody, signal: controller.signal });
+            clearTimeout(t);
+
+            const contentType = resp.headers.get('content-type') || '';
+            const status = resp.status;
+            if (/application\/json/i.test(contentType)) {
+                const data = await resp.json().catch(() => null);
+                return res.status(resp.ok ? 200 : status).json({ success: true, status, headers: Object.fromEntries(resp.headers.entries()), data });
+            } else {
+                const text = await resp.text().catch(() => '');
+                return res.status(resp.ok ? 200 : status).json({ success: true, status, headers: Object.fromEntries(resp.headers.entries()), text });
+            }
+        } catch (error) {
+            const message = error?.name === 'AbortError' ? 'Upstream fetch timed out' : (error?.message || 'Proxy fetch failed');
+            return res.status(502).json({ success: false, error: message });
+        }
+    }
+);
+
+// Basic cURL parser (best-effort; supports common flags: -X, -H, --header, --data, --data-raw)
+function parseCurlCommand(curl) {
+    try {
+        // Collapse backslash continuations and normalize whitespace
+        const normalized = curl
+            .replace(/\\\n/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        const parts = [];
+        let current = '';
+        let inSingle = false;
+        let inDouble = false;
+        for (let i = 0; i < normalized.length; i++) {
+            const ch = normalized[i];
+            if (ch === "'" && !inDouble) { inSingle = !inSingle; current += ch; continue; }
+            if (ch === '"' && !inSingle) { inDouble = !inDouble; current += ch; continue; }
+            if (ch === ' ' && !inSingle && !inDouble) { if (current) { parts.push(current); current = ''; } continue; }
+            current += ch;
+        }
+        if (current) parts.push(current);
+
+        // Remove initial curl token
+        const tokens = parts.filter(p => p.toLowerCase() !== 'curl');
+        let url = '';
+        let method = '';
+        const headers = {};
+        let body;
+        for (let i = 0; i < tokens.length; i++) {
+            const tok = tokens[i];
+            if (tok === '-X' || tok === '--request') {
+                method = (tokens[i + 1] || '').replace(/['"]/g, ''); i++; continue;
+            }
+            if (tok === '-H' || tok === '--header') {
+                const hv = (tokens[i + 1] || '').replace(/^['"]|['"]$/g, '');
+                const idx = hv.indexOf(':');
+                if (idx > -1) {
+                    const name = hv.slice(0, idx).trim();
+                    const val = hv.slice(idx + 1).trim();
+                    headers[name] = val;
+                }
+                i++; continue;
+            }
+            if (tok === '--data' || tok === '--data-raw' || tok === '--data-binary' || tok === '-d') {
+                const dv = tokens[i + 1];
+                if (typeof dv === 'string') {
+                    const unquoted = dv.replace(/^['"]|['"]$/g, '');
+                    try { body = JSON.parse(unquoted); } catch { body = unquoted; }
+                }
+                i++; continue;
+            }
+            if (!tok.startsWith('-') && !url) {
+                url = tok.replace(/^['"]|['"]$/g, '');
+                continue;
+            }
+        }
+        return { url, method: method || 'GET', headers, body };
+    } catch (_) {
+        return null;
+    }
+}
+
 // Simplified parseListParams - only handle basic search and sorting, no pagination on server
 const parseListParams = (query) => {
     const search = (query.search ?? '').toString().trim();
