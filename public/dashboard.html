@@ -1433,7 +1433,7 @@
                 if (!item) return;
                 const col = td.getAttribute('data-col') || '';
                 if (col === 'flags' || col === 'Processing Properties') openFlagsPanel(item);
-                else openDetailsPanel(item);
+                else openDetailsPanel(item, col);
             });
         });
 
@@ -1799,7 +1799,7 @@
         if (panel) panel.classList.remove('open');
     }
 
-    function openDetailsPanel(item) {
+    function openDetailsPanel(item, clickedCol = '') {
         const panel = el.detailsContent;
         const title = item.title || '(untitled)';
         const series = item.series_title ? ` • ${item.series_title}` : '';
@@ -1818,18 +1818,21 @@
             ? feats.map(f => `<span class="feature-pill">${escapeHTML(String(f))}</span>`).join('')
             : '<span class="pill">No features</span>';
 
-        const flags = computeProcessingFlags(item);
-        const processingHTML = `
-            <div class="section-title">Processing Properties</div>
-            <div class="kv" style="margin-bottom:.5rem;">
-                <div class="key">Content Adaptive Encoding</div><div>${renderFlagBadge(flags.contentAdaptiveEncoding)}</div>
-                <div class="key">Scene Detection Enabled</div><div>${renderFlagBadge(flags.sceneDetectionEnabled)}</div>
-                <div class="key">Keyframe Aligned Chapters (SDR/HDR)</div><div>${renderFlagBadge(flags.keyframeAlignedChapters)}</div>
-                <div class="key">Matching Durations (SDR/HDR Source)</div><div>${renderFlagBadge(flags.matchingDurations)}</div>
-                <div class="key">Ad Manager Status HLS/DASH SDR</div><div>${renderFlagBadge(flags.adManagerStatusHlsDashSdr)}</div>
-                <div class="key">Can feed passing</div><div>${renderFlagBadge(flags.canFeedPassing)}</div>
-            </div>
-        `;
+        let processingHTML = '';
+        if (clickedCol !== 'title' && clickedCol !== 'CMAF Status') {
+            const flags = computeProcessingFlags(item);
+            processingHTML = `
+                <div class="section-title">Processing Properties</div>
+                <div class="kv" style="margin-bottom:.5rem;">
+                    <div class="key">Content Adaptive Encoding</div><div>${renderFlagBadge(flags.contentAdaptiveEncoding)}</div>
+                    <div class="key">Scene Detection Enabled</div><div>${renderFlagBadge(flags.sceneDetectionEnabled)}</div>
+                    <div class="key">Keyframe Aligned Chapters (SDR/HDR)</div><div>${renderFlagBadge(flags.keyframeAlignedChapters)}</div>
+                    <div class="key">Matching Durations (SDR/HDR Source)</div><div>${renderFlagBadge(flags.matchingDurations)}</div>
+                    <div class="key">Ad Manager Status HLS/DASH SDR</div><div>${renderFlagBadge(flags.adManagerStatusHlsDashSdr)}</div>
+                    <div class="key">Can feed passing</div><div>${renderFlagBadge(flags.canFeedPassing)}</div>
+                </div>
+            `;
+        }
 
         const toArray = (v) => Array.isArray(v) ? v : (v && typeof v === 'object' ? Object.values(v) : []);
         const contentArr = toArray(item.content);
