@@ -354,6 +354,15 @@
             background: linear-gradient(90deg, #22c55e, #16a34a);
         }
 
+        .panel-divider {
+            height: 1px;
+            width: 100%;
+            background: var(--border-light);
+            border: 0;
+            opacity: 0.9;
+            margin: 1rem 0;
+        }
+
         @media (max-width: 768px) {
             .controls-grid, .filters-grid { grid-template-columns: 1fr; }
             .stats-bar { flex-direction: column; gap: 1rem; }
@@ -490,43 +499,47 @@
             <div style="text-align: center;">
                 <button class="btn btn-danger" id="clear-all-filters">🗑️ Clear All Filters</button>
             </div>
+
+            <div class="selection-controls" style="margin-top:1rem;">
+                <div class="selection-info">
+                    <span>📋 Selection:</span>
+                    <span class="selection-count" id="selection-count">0 selected</span>
+                </div>
+                <div class="selection-actions">
+                    <button class="btn" id="select-all-visible-btn">✅ Select Page</button>
+                    <button class="btn" id="select-all-btn">✅ Select All Filtered</button>
+                    <button class="btn btn-danger" id="clear-selection-btn">❌ Clear Selection</button>
+                    <button class="btn btn-accent" id="export-csv-btn">📊 Export to CSV</button>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="selection-controls">
-        <div class="selection-info">
-            <span>📋 Selection:</span>
-            <span class="selection-count" id="selection-count">0 selected</span>
-        </div>
-        <div class="selection-actions">
-            <button class="btn" id="select-all-visible-btn">✅ Select Page</button>
-            <button class="btn" id="select-all-btn">✅ Select All Filtered</button>
-            <button class="btn btn-danger" id="clear-selection-btn">❌ Clear Selection</button>
-            <button class="btn btn-accent" id="export-csv-btn">📊 Export to CSV</button>
-        </div>
-    </div>
 
-    <div class="stats-bar">
-        <div class="stat-item">
-            <span class="stat-number" id="total-items">0</span>
-            <span class="stat-label">Total Items</span>
+    <div class="multi-select-filters" style="margin-top:1rem;">
+        <div class="stats-bar" style="margin:0;">
+            <div class="stat-item">
+                <span class="stat-number" id="total-items">0</span>
+                <span class="stat-label">Total Items</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number" id="filtered-items">0</span>
+                <span class="stat-label">Filtered Results</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number" id="total-series">0</span>
+                <span class="stat-label">Series</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number" id="cmaf-count">0</span>
+                <span class="stat-label">CMAF Enabled</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number" id="encoded-count">0</span>
+                <span class="stat-label">Encoded</span>
+            </div>
         </div>
-        <div class="stat-item">
-            <span class="stat-number" id="filtered-items">0</span>
-            <span class="stat-label">Filtered Results</span>
-        </div>
-        <div class="stat-item">
-            <span class="stat-number" id="total-series">0</span>
-            <span class="stat-label">Series</span>
-        </div>
-        <div class="stat-item">
-            <span class="stat-number" id="cmaf-count">0</span>
-            <span class="stat-label">CMAF Enabled</span>
-        </div>
-        <div class="stat-item">
-            <span class="stat-number" id="encoded-count">0</span>
-            <span class="stat-label">Encoded</span>
-        </div>
+        <hr class="panel-divider"/>
     </div>
 
     <div class="mux-panel" id="mux-panel" style="display:block;">
