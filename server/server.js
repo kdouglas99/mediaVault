@@ -8,7 +8,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import cors from 'cors';
 import { corsOptions, helmetConfig, createRateLimit, validateFileUpload, requestLogger, errorHandler } from './middleware/security.js';
-import { validateCSVImport, validateItemsQuery, validateDBInit, sanitizeInput } from './middleware/validation.js';
+import { validateCSVImport, validateItemsQuery, validateDBInit, sanitizeInput, handleValidationErrors } from './middleware/validation.js';
+import { body, query } from 'express-validator';
 
 // Setup __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -305,6 +306,107 @@ app.get('/api/stats', rateLimit(), async (req, res) => {
     }
 });
 
+// Mux Performance Stats Endpoints
+// Create or update mux performance stats
+app.post(
+    '/api/mux-stats',
+    rateLimit(),
+    [
+        body('collected_at').optional().isISO8601().withMessage('collected_at must be ISO8601 datetime'),
+        body('time_window').optional().isString().isLength({ min: 1, max: 16 }),
+        body('comparison_window').optional().isString().isLength({ min: 1, max: 32 }),
+
+        body('total_view_count').optional().isInt({ min: 0 }).toInt(),
+        body('total_view_count_delta').optional().isFloat().toFloat(),
+        body('total_playing_time_minutes').optional().isInt({ min: 0 }).toInt(),
+        body('total_playing_time_delta').optional().isFloat().toFloat(),
+        body('total_unique_viewers').optional().isInt({ min: 0 }).toInt(),
+        body('total_unique_viewers_delta').optional().isFloat().toFloat(),
+
+        body('overall_experience_avg').optional().isInt({ min: 0, max: 100 }).toInt(),
+        body('overall_experience_delta').optional().isFloat().toFloat(),
+        body('playback_success_avg').optional().isInt({ min: 0, max: 100 }).toInt(),
+        body('playback_success_delta').optional().isFloat().toFloat(),
+        body('startup_time_avg').optional().isInt({ min: 0, max: 100 }).toInt(),
+        body('startup_time_delta').optional().isFloat().toFloat(),
+        body('smoothness_avg').optional().isInt({ min: 0, max: 100 }).toInt(),
+        body('smoothness_delta').optional().isFloat().toFloat(),
+        body('video_quality_avg').optional().isInt({ min: 0, max: 100 }).toInt(),
+        body('video_quality_delta').optional().isFloat().toFloat(),
+
+        body('failure_percent').optional().isFloat({ min: 0 }).toFloat(),
+        body('failure_percent_delta').optional().isFloat().toFloat(),
+        body('rebuffer_percent').optional().isFloat({ min: 0 }).toFloat(),
+        body('rebuffer_percent_delta').optional().isFloat().toFloat(),
+
+        body('meta').optional().isObject(),
+        handleValidationErrors
+    ],
+    async (req, res) => {
+        let client;
+        try {
+            client = await pool.connect();
+            const fields = [
+                'collected_at','time_window','comparison_window',
+                'total_view_count','total_view_count_delta','total_playing_time_minutes','total_playing_time_delta',
+                'total_unique_viewers','total_unique_viewers_delta',
+                'overall_experience_avg','overall_experience_delta',
+                'playback_success_avg','playback_success_delta',
+                'startup_time_avg','startup_time_delta',
+                'smoothness_avg','smoothness_delta',
+                'video_quality_avg','video_quality_delta',
+                'failure_percent','failure_percent_delta',
+                'rebuffer_percent','rebuffer_percent_delta',
+                'meta'
+            ];
+            const values = fields.map(k => req.body[k] ?? null);
+            const placeholders = fields.map((_, i) => `$${i + 1}`).join(',');
+            const sql = `INSERT INTO mux_performance_stats(${fields.join(',')}) VALUES (${placeholders}) RETURNING id, collected_at`;
+            const { rows } = await client.query(sql, values);
+            return res.json({ success: true, id: rows[0]?.id, collected_at: rows[0]?.collected_at });
+        } catch (error) {
+            logger.error('Error inserting mux stats', { error: error.message, stack: error.stack });
+            return res.status(500).json({ success: false, error: 'Failed to insert mux stats' });
+        } finally {
+            client?.release();
+        }
+    }
+);
+
+// Get mux performance stats (latest first)
+app.get(
+    '/api/mux-stats',
+    rateLimit(),
+    [
+        query('limit').optional().isInt({ min: 1, max: 500 }).toInt(),
+        query('time_window').optional().isString().isLength({ min: 1, max: 16 }),
+        handleValidationErrors
+    ],
+    async (req, res) => {
+        let client;
+        try {
+            client = await pool.connect();
+            const limit = Number(req.query.limit || 1);
+            const timeWindow = req.query.time_window ? String(req.query.time_window) : null;
+            const params = [];
+            let where = '';
+            if (timeWindow) {
+                params.push(timeWindow);
+                where = 'WHERE time_window = $1';
+            }
+            params.push(limit);
+            const sql = `SELECT * FROM mux_performance_stats ${where} ORDER BY collected_at DESC NULLS LAST, id DESC LIMIT $${params.length}`;
+            const { rows } = await client.query(sql, params);
+            return res.json({ success: true, data: rows });
+        } catch (error) {
+            logger.error('Error fetching mux stats', { error: error.message, stack: error.stack });
+            return res.status(500).json({ success: false, error: 'Failed to fetch mux stats' });
+        } finally {
+            client?.release();
+        }
+    }
+);
+
 // Database initialization handler
 const initDbHandler = async (req, res) => {
     let client;
@@ -400,6 +502,43 @@ const initDbHandler = async (req, res) => {
             CREATE INDEX IF NOT EXISTS idx_media_items_content_type ON media_items(content_type);
             CREATE INDEX IF NOT EXISTS idx_media_items_availability_state ON media_items(availability_state);
             CREATE INDEX IF NOT EXISTS idx_media_items_external_id ON media_items(external_id);
+        `);
+
+        // Ensure mux_performance_stats table exists (idempotent)
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS mux_performance_stats (
+                id SERIAL PRIMARY KEY,
+                collected_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                time_window TEXT NOT NULL DEFAULT '1h',
+                comparison_window TEXT,
+
+                total_view_count BIGINT,
+                total_view_count_delta NUMERIC,
+                total_playing_time_minutes BIGINT,
+                total_playing_time_delta NUMERIC,
+                total_unique_viewers BIGINT,
+                total_unique_viewers_delta NUMERIC,
+
+                overall_experience_avg SMALLINT CHECK (overall_experience_avg BETWEEN 0 AND 100),
+                overall_experience_delta NUMERIC,
+                playback_success_avg SMALLINT CHECK (playback_success_avg BETWEEN 0 AND 100),
+                playback_success_delta NUMERIC,
+                startup_time_avg SMALLINT CHECK (startup_time_avg BETWEEN 0 AND 100),
+                startup_time_delta NUMERIC,
+                smoothness_avg SMALLINT CHECK (smoothness_avg BETWEEN 0 AND 100),
+                smoothness_delta NUMERIC,
+                video_quality_avg SMALLINT CHECK (video_quality_avg BETWEEN 0 AND 100),
+                video_quality_delta NUMERIC,
+
+                failure_percent NUMERIC,
+                failure_percent_delta NUMERIC,
+                rebuffer_percent NUMERIC,
+                rebuffer_percent_delta NUMERIC,
+
+                meta JSONB
+            );
+            CREATE INDEX IF NOT EXISTS idx_mux_stats_collected_at ON mux_performance_stats(collected_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_mux_stats_time_window ON mux_performance_stats(time_window);
         `);
 
         await client.query(`
@@ -714,6 +853,15 @@ const insertBatchIntoStaging = async (client, rows) => {
         if (Object.keys(msn).length) raw.msn = msn;
         if (Object.keys(pl2).length) raw.pl2 = pl2;
 
+        // Pass through pre-nested structures if present (for JSON imports)
+        if (!raw.content && Array.isArray(r.content)) raw.content = r.content;
+        if (!raw.thumbnails && Array.isArray(r.thumbnails)) raw.thumbnails = r.thumbnails;
+        if (!raw.cbs && r.cbs && typeof r.cbs === 'object') raw.cbs = r.cbs;
+        if (!raw.ytcp && r.ytcp && typeof r.ytcp === 'object') raw.ytcp = r.ytcp;
+        if (!raw.yt && r.yt && typeof r.yt === 'object') raw.yt = r.yt;
+        if (!raw.msn && r.msn && typeof r.msn === 'object') raw.msn = r.msn;
+        if (!raw.pl2 && r.pl2 && typeof r.pl2 === 'object') raw.pl2 = r.pl2;
+
         return raw;
     };
 
@@ -829,6 +977,37 @@ app.post('/api/import/csv', rateLimit(RATE_LIMIT_UPLOAD_MAX, UPLOAD_RATE_LIMIT_W
     } finally {
         client?.release();
         fs.unlink(filePath, () => {});
+    }
+});
+
+// JSON Import functionality (mirrors CSV import flow via staging + import function)
+app.post('/api/import/json', rateLimit(RATE_LIMIT_UPLOAD_MAX, UPLOAD_RATE_LIMIT_WINDOW_MS, { perPath: true }), async (req, res) => {
+    const items = Array.isArray(req.body?.items) ? req.body.items : null;
+    if (!items || items.length === 0) {
+        return res.status(400).json({ success: false, error: 'Request body must include a non-empty array "items"' });
+    }
+
+    let client;
+    try {
+        client = await pool.connect();
+        await client.query('BEGIN');
+        await client.query('TRUNCATE TABLE media_items_staging');
+
+        const BATCH_SIZE = 500;
+        for (let i = 0; i < items.length; i += BATCH_SIZE) {
+            const batch = items.slice(i, i + BATCH_SIZE);
+            await insertBatchIntoStaging(client, batch);
+        }
+
+        const { rows } = await client.query('SELECT import_media_csv() AS imported');
+        await client.query('COMMIT');
+        res.json({ success: true, message: 'JSON imported successfully', imported: rows?.[0]?.imported ?? null });
+    } catch (error) {
+        logger.error('JSON import failed', { error: error.message, stack: error.stack });
+        try { await client?.query('ROLLBACK'); } catch {}
+        res.status(500).json({ success: false, error: 'JSON import failed' });
+    } finally {
+        client?.release();
     }
 });
 
