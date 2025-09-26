@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Media Vault - Ingest Tool</title>
+    <script src="/js/ignore-extension-errors.js" defer></script>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --surface: #111827;
+            --surface-2: #0b1220;
+            --text: #ffffff;
+            --text-muted: rgba(255,255,255,0.75);
+            --border: #1f2937;
+            --border-light: #374151;
+            --primary: #60a5fa;
+            --primary-hover: #3b82f6;
+            --accent: #34d399;
+            --danger: #f87171;
+            --radius: 12px;
+            --shadow: 0 10px 30px rgba(0,0,0,0.35);
+            --focus: 0 0 0 3px rgba(96,165,250,0.35);
+        }
+        * { box-sizing: border-box; }
+        body { margin:0; background: var(--bg); color: var(--text); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial; padding: 2rem 1.25rem; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { text-align:center; margin-bottom: 1.5rem; }
+        .card { background: var(--surface); border:1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 1rem; }
+        .grid { display:grid; grid-template-columns: 1fr; gap: 1rem; }
+        .row { display:flex; gap:.75rem; flex-wrap:wrap; align-items:center; }
+        label { font-size:.9rem; font-weight:600; }
+        input[type="text"], textarea { width:100%; background: var(--surface-2); color: var(--text); border:1px solid var(--border); border-radius:8px; padding:.6rem .75rem; font-size:.9rem; }
+        textarea { min-height: 200px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+        .btn { background: var(--primary); color:white; border:none; border-radius:8px; padding:.6rem 1rem; font-weight:700; cursor:pointer; }
+        .btn:hover { background: var(--primary-hover); }
+        .btn-secondary { background: var(--accent); }
+        .btn-danger { background: var(--danger); }
+        .muted { color: var(--text-muted); }
+        .pill { display:inline-block; background: var(--surface-2); border:1px solid var(--border-light); border-radius:999px; padding: .2rem .5rem; font-size:.75rem; }
+        pre { white-space: pre-wrap; word-break: break-word; background: var(--surface-2); border:1px solid var(--border); border-radius:8px; padding: .75rem; max-height: 360px; overflow:auto; }
+        .two-col { display:grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+    </style>
+    </head>
+<body>
+<div class="container">
+    <h1>🌐 Media Vault Ingest Tool</h1>
+
+    <div class="card grid">
+        <div>
+            <label for="api-url">Source API URL</label>
+            <input id="api-url" type="text" placeholder="https://example.com/api/content"/>
+            <div class="muted" style="margin-top:.25rem;">Response must be JSON. Provide either an array of items or an object with an <span class="pill">items</span> array.</div>
+        </div>
+        <div class="row">
+            <button id="fetch-btn" class="btn">🔄 Fetch</button>
+            <button id="clear-btn" class="btn btn-danger">🧹 Clear</button>
+        </div>
+    </div>
+
+    <div class="grid" style="margin-top:1rem;">
+        <div class="card two-col">
+            <div>
+                <label for="raw-json">Raw JSON (editable)</label>
+                <textarea id="raw-json" placeholder='[{"id":"123","title":"Example"}]'></textarea>
+                <div class="row" style="margin-top:.5rem;">
+                    <button id="format-json-btn" class="btn btn-secondary">🧰 Format JSON</button>
+                </div>
+            </div>
+            <div>
+                <label for="preview">Transformed Preview</label>
+                <pre id="preview" aria-live="polite">No data</pre>
+                <div class="muted" style="margin-top:.25rem;">We normalize keys to match the CSV import schema (e.g., <span class="pill">cbs$SeriesTitle</span>, <span class="pill">cbs$SeasonNumber</span>, arrays for <span class="pill">premium_features</span>).</div>
+            </div>
+        </div>
+
+        <div class="card row" style="justify-content: space-between;">
+            <div>
+                <span class="muted">Items ready:</span> <span class="pill" id="count">0</span>
+            </div>
+            <div class="row">
+                <button id="transform-btn" class="btn">🔧 Transform</button>
+                <button id="ingest-btn" class="btn">📥 Ingest to Backend</button>
+            </div>
+        </div>
+        <div id="status" class="muted"></div>
+    </div>
+</div>
+
+<script type="module">
+let API_BASE = '';
+
+async function loadConfig() {
+    try {
+        const r = await fetch('/api/config');
+        if (r.ok) { const j = await r.json(); if (j.success) { API_BASE = j.config.API_BASE; return; } }
+    } catch {}
+    const baseUrl = window.location.origin.includes('localhost:5173') ? 'http://localhost:3001' : window.location.origin;
+    API_BASE = baseUrl.replace(/\/$/, '') + '/api';
+}
+
+function normalizeAndSortFeatures(arr) {
+    if (!Array.isArray(arr)) return [];
+    const cleaned = arr
+        .flatMap(v => {
+            if (v == null) return [];
+            let s = String(v).trim();
+            if (s.startsWith('[') && s.endsWith(']')) s = s.slice(1, -1);
+            s = s.replace(/"\s+"/g, '","');
+            if (s.includes(',')) return s.split(',').map(x => x.trim()).filter(Boolean);
+            return [s];
+        })
+        .map(s => s.replace(/^"+|"+$/g,'').replace(/^'+|'+$/g,'').trim())
+        .filter(Boolean);
+    const seen = new Map();
+    for (const f of cleaned) { const key = f.toLowerCase(); if (!seen.has(key)) seen.set(key, f); }
+    return Array.from(seen.values()).sort((a,b)=>a.localeCompare(b, undefined, { numeric:true, sensitivity:'base' }));
+}
+
+function toStagingLike(item) {
+    const out = { ...item };
+    // Map common fields to CSV headers used by backend staging import
+    if (out.series_title && !out['cbs$SeriesTitle']) out['cbs$SeriesTitle'] = out.series_title;
+    if (out.season_number != null && !out['cbs$SeasonNumber']) out['cbs$SeasonNumber'] = out.season_number;
+    if (out.episode_number != null && !out['cbs$EpisodeNumber']) out['cbs$EpisodeNumber'] = out.episode_number;
+    if (out.content_type && !out['cbs$contentType']) out['cbs$contentType'] = out.content_type;
+    if (out.primary_category_name && !out['cbs$PrimaryCategoryName']) out['cbs$PrimaryCategoryName'] = out.primary_category_name;
+    if (out.primary_category_id && !out['cbs$PrimaryCategory']) out['cbs$PrimaryCategory'] = out.primary_category_id;
+    if (out.source_partner && !out['cbs$SourcePartner']) out['cbs$SourcePartner'] = out.source_partner;
+    if (out.video_id && !out['cbs$VideoID']) out['cbs$VideoID'] = out.video_id;
+    if (!out.premium_features && Array.isArray(out['cbs$premiumFeatures'])) out.premium_features = out['cbs$premiumFeatures'];
+
+    // Normalize arrays
+    if (typeof out.countries === 'string') {
+        try { const j = JSON.parse(out.countries); if (Array.isArray(j)) out.countries = j; } catch {}
+        if (typeof out.countries === 'string') out.countries = out.countries.split(',').map(s=>s.trim()).filter(Boolean);
+    }
+    if (typeof out.premium_features === 'string') {
+        try { const j = JSON.parse(out.premium_features); if (Array.isArray(j)) out.premium_features = j; } catch {}
+        if (typeof out.premium_features === 'string') out.premium_features = out.premium_features.split(',').map(s=>s.trim()).filter(Boolean);
+    }
+    out.premium_features = normalizeAndSortFeatures(out.premium_features || []);
+
+    // Pass-through nested blocks if present
+    if (out.content && !Array.isArray(out.content)) {
+        try { const arr = Array.isArray(out.content) ? out.content : Object.values(out.content); if (Array.isArray(arr)) out.content = arr; } catch {}
+    }
+    if (out.thumbnails && !Array.isArray(out.thumbnails)) {
+        try { const arr = Array.isArray(out.thumbnails) ? out.thumbnails : Object.values(out.thumbnails); if (Array.isArray(arr)) out.thumbnails = arr; } catch {}
+    }
+    return out;
+}
+
+function coerceToItems(json) {
+    if (Array.isArray(json)) return json;
+    if (json && typeof json === 'object') {
+        if (Array.isArray(json.items)) return json.items;
+        if (Array.isArray(json.data)) return json.data;
+    }
+    return [];
+}
+
+const el = {
+    apiUrl: document.getElementById('api-url'),
+    fetchBtn: document.getElementById('fetch-btn'),
+    clearBtn: document.getElementById('clear-btn'),
+    raw: document.getElementById('raw-json'),
+    formatBtn: document.getElementById('format-json-btn'),
+    transformBtn: document.getElementById('transform-btn'),
+    ingestBtn: document.getElementById('ingest-btn'),
+    preview: document.getElementById('preview'),
+    count: document.getElementById('count'),
+    status: document.getElementById('status')
+};
+
+function setStatus(s, kind='info') {
+    el.status.textContent = s;
+}
+
+function renderPreview(items) {
+    el.count.textContent = String(items.length);
+    if (!items.length) { el.preview.textContent = 'No data'; return; }
+    const sample = items.slice(0, 3);
+    el.preview.textContent = JSON.stringify(sample, null, 2);
+}
+
+el.fetchBtn.addEventListener('click', async () => {
+    const url = el.apiUrl.value.trim();
+    if (!url) { setStatus('Enter a source API URL'); return; }
+    setStatus('Fetching...');
+    try {
+        const r = await fetch(url);
+        const j = await r.json();
+        el.raw.value = JSON.stringify(j, null, 2);
+        setStatus('Fetched');
+    } catch (e) {
+        setStatus('Fetch failed: ' + (e?.message || e));
+    }
+});
+
+el.clearBtn.addEventListener('click', () => {
+    el.raw.value = '';
+    renderPreview([]);
+    setStatus('Cleared');
+});
+
+el.formatBtn.addEventListener('click', () => {
+    try { const j = JSON.parse(el.raw.value || 'null'); el.raw.value = JSON.stringify(j, null, 2); setStatus('Formatted'); }
+    catch { setStatus('Invalid JSON'); }
+});
+
+el.transformBtn.addEventListener('click', () => {
+    try {
+        const j = JSON.parse(el.raw.value || '[]');
+        const items = coerceToItems(j).map(toStagingLike);
+        renderPreview(items);
+        window.__INGEST_ITEMS__ = items;
+        setStatus('Transformed');
+    } catch (e) {
+        setStatus('Transform failed: ' + (e?.message || e));
+    }
+});
+
+el.ingestBtn.addEventListener('click', async () => {
+    try {
+        const items = window.__INGEST_ITEMS__ || coerceToItems(JSON.parse(el.raw.value || '[]')).map(toStagingLike);
+        if (!items.length) { setStatus('Nothing to ingest'); return; }
+        el.ingestBtn.disabled = true; el.ingestBtn.textContent = 'Importing...';
+        const r = await fetch(`${API_BASE}/import/json`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items }) });
+        const j = await r.json();
+        if (!r.ok || !j.success) throw new Error(j.error || 'Import failed');
+        setStatus(`Success: ${j.message || 'Imported'}${j.imported != null ? ' (' + j.imported + ')' : ''}`);
+    } catch (e) {
+        setStatus('Import error: ' + (e?.message || e));
+    } finally {
+        el.ingestBtn.disabled = false; el.ingestBtn.textContent = '📥 Ingest to Backend';
+    }
+});
+
+(async function init(){ await loadConfig(); })();
+</script>
+</body>
+</html>
+
+

@@ -20,4 +20,4 @@ function computeApiBase(): string {
   return `${protocol}//${hostname}${port ? `:${port}` : ''}`.replace(/\/$/, '');
 }
 
-const API_URL = computeApiBase();
+export const API_URL = computeApiBase();
