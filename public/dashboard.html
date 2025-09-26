@@ -334,20 +334,20 @@
         .mux-title { font-weight: 700; font-size: .95rem; margin-bottom: .25rem; }
         .mux-sub { color: var(--text-muted); font-size: .8rem; margin-bottom: .5rem; }
         .mux-main { display:flex; align-items: baseline; gap:.25rem; }
-        .mux-main .num { font-size: 1.8rem; font-weight: 800; color: var(--primary); }
+        .mux-main .num { font-size: 1.6rem; font-weight: 800; color: var(--primary); }
         .mux-main .unit { color: var(--text-muted); font-weight: 700; }
         .mux-delta { font-size:.85rem; margin-top:.25rem; }
         .mux-delta.positive { color: #10b981; }
         .mux-delta.negative { color: #ef4444; }
         .mux-foot { color: var(--text-muted); font-size: .8rem; margin-top:.25rem; }
-        .mux-children { margin-top:.5rem; padding-top:.5rem; border-top: 1px dashed var(--border-light); }
-        .mux-child { display:flex; align-items:center; justify-content: space-between; font-size:.9rem; padding:.2rem 0; }
+        .mux-children { margin-top:.5rem; padding-top:.5rem; border-top: 1px dashed var(--border-light); display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: .35rem .5rem; }
+        .mux-child { display:grid; grid-template-columns: 1fr auto; align-items:center; font-size:.85rem; padding:.1rem 0; column-gap: .5rem; }
         .score {
             display: inline-flex; align-items: center; gap: .5rem;
         }
         .score-bar {
-            position: relative; display: inline-block; width: 110px; height: 8px;
-            background: rgba(255,255,255,0.08); border-radius: 999px; overflow: hidden;
+            position: relative; display: inline-block; width: 72px; height: 6px;
+            background: rgba(255,255,255,0.12); border-radius: 999px; overflow: hidden;
         }
         .score-bar > span {
             position: absolute; top:0; left:0; bottom:0; width: 0%;
