@@ -107,7 +107,9 @@ async function loadConfig() {
         const r = await fetch('/api/config');
         if (r.ok) { const j = await r.json(); if (j.success) { API_BASE = j.config.API_BASE; return; } }
     } catch {}
-    const baseUrl = window.location.origin.includes('localhost:5173') ? 'http://localhost:3001' : window.location.origin;
+    // Fallback: if running on localhost (any port), assume backend at 3001
+    const isLocal = /localhost|127\.0\.0\.1/.test(window.location.hostname);
+    const baseUrl = isLocal ? 'http://localhost:3001' : window.location.origin;
     API_BASE = baseUrl.replace(/\/$/, '') + '/api';
 }
 
@@ -211,7 +213,8 @@ el.fetchBtn.addEventListener('click', async () => {
     try {
         const payload = curl ? { curl } : { url, method: 'GET', headers };
         const r = await fetch(`${API_BASE}/proxy/fetch`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-        const j = await r.json();
+        let j;
+        try { j = await r.json(); } catch { j = { success: false, error: `Non-JSON response (${r.status})` }; }
         if (!r.ok || !j.success) throw new Error(j.error || 'Proxy fetch failed');
         const data = j.data ?? (j.text ? (() => { try { return JSON.parse(j.text); } catch { return null; } })() : null);
         if (!data) {
