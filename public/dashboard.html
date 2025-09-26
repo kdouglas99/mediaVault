@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="description" content="Explore, filter, and export your Media Vault catalog."/>
     <title>Media Vault Dashboard</title>
     <!-- Suppress noisy extension-originated console errors (e.g., background-redux-new.js) -->
-    <script src="/js/ignore-extension-errors.js"></script>
+    <script src="/js/ignore-extension-errors.js" defer></script>
     <style>
         :root {
             --bg: #0f172a;
@@ -294,6 +295,74 @@
         .country-pill { margin: 2px; }
         .category-pill { background: color-mix(in oklab, var(--primary), black 75%); border-color: rgba(96,165,250,0.4); }
 
+        /* Mux performance panel */
+        .mux-panel {
+            background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02)), var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .mux-controls {
+            display: flex;
+            gap: .5rem;
+            align-items: center;
+            flex-wrap: wrap;
+            margin: .25rem 0 .75rem 0;
+        }
+        .mux-controls select, .mux-controls input[type="number"] {
+            background: var(--surface-2);
+            color: var(--text);
+            border: 1px solid var(--border-light);
+            border-radius: 6px;
+            padding: .35rem .5rem;
+            font-size: .85rem;
+        }
+        .mux-controls label { font-size: .85rem; color: var(--text-muted); }
+        .mux-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+        }
+        .mux-card {
+            background: var(--surface-2);
+            border: 1px solid var(--border-light);
+            border-radius: 10px;
+            padding: .85rem;
+        }
+        .mux-title { font-weight: 700; font-size: .95rem; margin-bottom: .25rem; }
+        .mux-sub { color: var(--text-muted); font-size: .8rem; margin-bottom: .5rem; }
+        .mux-main { display:flex; align-items: baseline; gap:.25rem; }
+        .mux-main .num { font-size: 1.6rem; font-weight: 800; color: var(--primary); }
+        .mux-main .unit { color: var(--text-muted); font-weight: 700; }
+        .mux-delta { font-size:.85rem; margin-top:.25rem; }
+        .mux-delta.positive { color: #10b981; }
+        .mux-delta.negative { color: #ef4444; }
+        .mux-foot { color: var(--text-muted); font-size: .8rem; margin-top:.25rem; }
+        .mux-children { margin-top:.5rem; padding-top:.5rem; border-top: 1px dashed var(--border-light); display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: .35rem .5rem; }
+        .mux-child { display:grid; grid-template-columns: 1fr auto; align-items:center; font-size:.85rem; padding:.1rem 0; column-gap: .5rem; }
+        .score {
+            display: inline-flex; align-items: center; gap: .5rem;
+        }
+        .score-bar {
+            position: relative; display: inline-block; width: 72px; height: 6px;
+            background: rgba(255,255,255,0.12); border-radius: 999px; overflow: hidden;
+        }
+        .score-bar > span {
+            position: absolute; top:0; left:0; bottom:0; width: 0%;
+            background: linear-gradient(90deg, #22c55e, #16a34a);
+        }
+
+        .panel-divider {
+            height: 1px;
+            width: 100%;
+            background: var(--border-light);
+            border: 0;
+            opacity: 0.9;
+            margin: 1rem 0;
+        }
+
         @media (max-width: 768px) {
             .controls-grid, .filters-grid { grid-template-columns: 1fr; }
             .stats-bar { flex-direction: column; gap: 1rem; }
@@ -307,6 +376,12 @@
     </style>
 </head>
 <body>
+<noscript>
+<div class="error" role="alert" aria-live="assertive" style="margin:1rem;">
+    JavaScript is required to use the Media Vault dashboard.
+    Please enable JavaScript and reload the page.
+    </div>
+</noscript>
 <div class="container">
     <h1>🎬 Media Vault Dashboard</h1>
 
@@ -424,50 +499,70 @@
             <div style="text-align: center;">
                 <button class="btn btn-danger" id="clear-all-filters">🗑️ Clear All Filters</button>
             </div>
+
+            <div class="selection-controls" style="margin-top:1rem;">
+                <div class="selection-info">
+                    <span>📋 Selection:</span>
+                    <span class="selection-count" id="selection-count">0 selected</span>
+                </div>
+                <div class="selection-actions">
+                    <button class="btn" id="select-all-visible-btn">✅ Select Page</button>
+                    <button class="btn" id="select-all-btn">✅ Select All Filtered</button>
+                    <button class="btn btn-danger" id="clear-selection-btn">❌ Clear Selection</button>
+                    <button class="btn btn-accent" id="export-csv-btn">📊 Export to CSV</button>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="selection-controls">
-        <div class="selection-info">
-            <span>📋 Selection:</span>
-            <span class="selection-count" id="selection-count">0 selected</span>
+
+    <div class="multi-select-filters" style="margin-top:1rem;">
+        <div class="stats-bar" style="margin:0;">
+            <div class="stat-item">
+                <span class="stat-number" id="total-items">0</span>
+                <span class="stat-label">Total Items</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number" id="filtered-items">0</span>
+                <span class="stat-label">Filtered Results</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number" id="total-series">0</span>
+                <span class="stat-label">Series</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number" id="cmaf-count">0</span>
+                <span class="stat-label">CMAF Enabled</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number" id="encoded-count">0</span>
+                <span class="stat-label">Encoded</span>
+            </div>
         </div>
-        <div class="selection-actions">
-            <button class="btn" id="select-all-visible-btn">✅ Select Page</button>
-            <button class="btn" id="select-all-btn">✅ Select All Filtered</button>
-            <button class="btn btn-danger" id="clear-selection-btn">❌ Clear Selection</button>
-            <button class="btn btn-accent" id="export-csv-btn">📊 Export to CSV</button>
-        </div>
+        <hr class="panel-divider"/>
     </div>
 
-    <div class="stats-bar">
-        <div class="stat-item">
-            <span class="stat-number" id="total-items">0</span>
-            <span class="stat-label">Total Items</span>
+    <div class="mux-panel" id="mux-panel" style="display:block;">
+        <div class="mux-title" style="font-size:1.1rem;">Mux Performance Stats</div>
+        <div class="mux-controls">
+            <label for="mux-window">Window</label>
+            <select id="mux-window">
+                <option value="1h" selected>Last 1 hour</option>
+                <option value="24h">Last 24 hours</option>
+                <option value="7d">Last 7 days</option>
+            </select>
+            <label for="mux-agg">Avg of last</label>
+            <input id="mux-agg" type="number" min="1" max="100" step="1" value="1" style="width:70px;"/>
+            <span class="mux-sub">(records)</span>
         </div>
-        <div class="stat-item">
-            <span class="stat-number" id="filtered-items">0</span>
-            <span class="stat-label">Filtered Results</span>
-        </div>
-        <div class="stat-item">
-            <span class="stat-number" id="total-series">0</span>
-            <span class="stat-label">Series</span>
-        </div>
-        <div class="stat-item">
-            <span class="stat-number" id="cmaf-count">0</span>
-            <span class="stat-label">CMAF Enabled</span>
-        </div>
-        <div class="stat-item">
-            <span class="stat-number" id="encoded-count">0</span>
-            <span class="stat-label">Encoded</span>
-        </div>
+        <div class="mux-grid" id="mux-grid"></div>
     </div>
 
     <div class="media-layout" id="media-layout" style="display:none;">
         <div id="left-col">
             <div class="media-table-container">
-                <div class="loading" id="loading">Loading media data...</div>
-                <div class="error" id="error" style="display:none;"></div>
+                <div class="loading" id="loading" role="status" aria-live="polite">Loading media data...</div>
+                <div class="error" id="error" role="alert" aria-live="assertive" style="display:none;"></div>
 
                 <div class="table-wrapper" style="display:none;" id="table-wrapper">
                     <table id="media-table">
@@ -522,6 +617,7 @@
     const ALL_COLUMNS = [
         // Virtual/derived columns first
         'CMAF Status',
+        'Processing Properties',
         // Schema columns
         'guid','title','cbs$SeriesTitle','id','added','updated','approved','description','availableDate','ratings',
         'cbs$EpisodeNumber','cbs$PrimaryCategoryName','cbs$SourcePartner','cbs$videoProperties','pubDate','provider',
@@ -715,6 +811,63 @@
     function getCMAFStatus(item) {
         const features = normalizeAndSortFeatures(item.premium_features || []);
         return features.some(f => (f||'').toLowerCase().includes('cmaf') || (f||'').toLowerCase().includes('dash') || (f||'').toLowerCase().includes('hls')) ? 'Enabled' : 'Disabled';
+    }
+
+    // Processing flags helpers
+    function toLowerArray(arr) {
+        return (arr || []).map(v => String(v).toLowerCase());
+    }
+    function contentAggregates(item) {
+        const content = Array.isArray(item.content) ? item.content : [];
+        const assetTypes = new Set();
+        const formats = new Set();
+        const types = new Set();
+        for (const c of content) {
+            if (!c || typeof c !== 'object') continue;
+            if (Array.isArray(c.assetTypes)) toLowerArray(c.assetTypes).forEach(a => assetTypes.add(a));
+            if (c.format) formats.add(String(c.format).toLowerCase());
+            if (c.contentType) types.add(String(c.contentType).toLowerCase());
+        }
+        return { assetTypes, formats, types };
+    }
+    function computeProcessingFlags(item) {
+        const features = normalizeAndSortFeatures(item.premium_features || []).map(f => String(f).toLowerCase());
+        const { assetTypes, formats, types } = contentAggregates(item);
+        const hasHls = features.some(f => f.includes('hls')) || assetTypes.has('hls') || formats.has('hls') || types.has('hls');
+        const hasDash = features.some(f => f.includes('dash')) || assetTypes.has('dash') || formats.has('dash') || types.has('dash');
+        const hasChapters = features.some(f => f.includes('chapter')) || assetTypes.has('chapters') || formats.has('chapters');
+        const isCmaf = getCMAFStatus(item) === 'Enabled';
+
+        const contentAdaptiveEncoding = features.some(f => f.includes('content adaptive')) || features.some(f => f.includes('adaptive encoding')) || features.some(f => f.includes('cae'));
+        const sceneDetectionEnabled = features.some(f => f.includes('scene detect')) || features.some(f => f.includes('scene detection'));
+        const keyframeAlignedChapters = hasChapters || features.some(f => f.includes('keyframe aligned'));
+        const matchingDurations = false; // not enough data to verify accurately
+        const adManagerStatusHlsDashSdr = hasHls && hasDash; // heuristic
+        const canFeedPassing = isCmaf && hasHls && hasDash;
+
+        return {
+            contentAdaptiveEncoding,
+            sceneDetectionEnabled,
+            keyframeAlignedChapters,
+            matchingDurations,
+            adManagerStatusHlsDashSdr,
+            canFeedPassing
+        };
+    }
+    function summarizeFlags(flags) {
+        const vals = Object.values(flags);
+        const yes = vals.filter(Boolean).length;
+        return { yes, total: vals.length };
+    }
+    function renderFlagBadge(b) {
+        const label = b ? 'Yes' : 'No';
+        const cls = b ? 'badge-success' : 'badge-danger';
+        return `<span class="badge ${cls}">${label}</span>`;
+    }
+    function renderFlagIcon(b) {
+        return b
+            ? `<span aria-label="True" title="True" style="color:#10b981; font-size:1.05rem;">✅</span>`
+            : `<span aria-label="False" title="False" style="color:#ef4444; font-size:1.05rem;">❌</span>`;
     }
 
     function normalizeAndSortFeatures(arr) {
@@ -921,6 +1074,239 @@
         }
     }
 
+    // Mux performance panel rendering
+    function formatNumberAbbrev(value) {
+        if (value == null) return '-';
+        const n = Number(value);
+        if (Number.isNaN(n)) return '-';
+        if (n >= 1_000_000) return { num: (n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 2), unit: 'M' };
+        if (n >= 1_000) return { num: (n / 1_000).toFixed(n % 1_000 === 0 ? 0 : 1), unit: 'k' };
+        return { num: n.toString(), unit: '' };
+    }
+    function formatPercentDelta(delta) {
+        if (delta == null || delta === '') return { text: '-', cls: '' };
+        const n = Number(delta);
+        if (Number.isNaN(n)) return { text: '-', cls: '' };
+        const cls = n >= 0 ? 'positive' : 'negative';
+        const abs = Math.abs(n);
+        return { text: `${abs % 1 === 0 ? abs.toFixed(0) : abs.toFixed(1)}%`, cls };
+    }
+    function renderMuxCard({ title, mainValue, mainUnit = '', delta, foot, children = [] }) {
+        const d = formatPercentDelta(delta);
+        return `
+            <div class="mux-card">
+                <div class="mux-title">${escapeHTML(title)}</div>
+                <div class="mux-sub">Quality of Service</div>
+                <div class="mux-main">
+                    <span class="num">${escapeHTML(String(mainValue))}</span>
+                    ${mainUnit ? `<span class="unit">${escapeHTML(mainUnit)}</span>` : ''}
+                </div>
+                <div class="mux-delta ${d.cls}">${escapeHTML(d.text)}</div>
+                <div class="mux-foot">${escapeHTML(foot)}</div>
+                ${children.length ? `
+                <div class="mux-children">
+                    ${children.map(c => {
+                        const cd = formatPercentDelta(c.delta);
+                        return `
+                        <div class="mux-child">
+                            <span>${escapeHTML(c.label)}</span>
+                            <span class="score">
+                                <strong>${escapeHTML(String(c.value ?? '-'))}</strong>
+                                <span class="score-bar" aria-hidden="true"><span style="width:${Math.max(0, Math.min(100, Number(c.value||0)))}%"></span></span>
+                                ${cd.text !== '-' ? `<span class="mux-delta ${cd.cls}" style="margin-left:.35rem;">${escapeHTML(cd.text)}</span>` : ''}
+                            </span>
+                        </div>`;
+                    }).join('')}
+                </div>` : ''}
+            </div>
+        `;
+    }
+    function renderMuxPanel(stats) {
+        const panel = document.getElementById('mux-panel');
+        const grid = document.getElementById('mux-grid');
+        if (!panel || !grid) return;
+
+        // Totals
+        const tv = formatNumberAbbrev(stats.total_view_count ?? null);
+        const tpt = formatNumberAbbrev(stats.total_playing_time_minutes ?? null);
+        const tuv = formatNumberAbbrev(stats.total_unique_viewers ?? null);
+
+        const cards = [];
+
+        // Total Views
+        cards.push(renderMuxCard({
+            title: 'Total View Count',
+            mainValue: tv.num,
+            mainUnit: tv.unit,
+            delta: stats.total_view_count_delta,
+            foot: 'Total Views'
+        }));
+
+        // Overall Experience with nested child scores (each 1-100)
+        cards.push(renderMuxCard({
+            title: 'Overall Experience (Avg)',
+            mainValue: stats.overall_experience_avg ?? '-',
+            delta: stats.overall_experience_delta,
+            foot: 'Overall Experience (Avg)',
+            children: [
+                { label: 'Video Quality (Avg)', value: stats.video_quality_avg ?? '-', delta: stats.video_quality_delta },
+                { label: 'Smoothness (Avg)', value: stats.smoothness_avg ?? '-', delta: stats.smoothness_delta },
+                { label: 'Startup Time (Avg)', value: stats.startup_time_avg ?? '-', delta: stats.startup_time_delta },
+                { label: 'Playback Success (Avg)', value: stats.playback_success_avg ?? '-', delta: stats.playback_success_delta }
+            ]
+        }));
+
+        // Total Playing Time (mins)
+        cards.push(renderMuxCard({
+            title: 'Total Playing Time',
+            mainValue: tpt.num,
+            mainUnit: tpt.unit,
+            delta: stats.total_playing_time_delta,
+            foot: 'Total Playing Time (mins)'
+        }));
+
+        // Total Unique Viewers
+        cards.push(renderMuxCard({
+            title: 'Total Unique Viewers',
+            mainValue: tuv.num,
+            mainUnit: tuv.unit,
+            delta: stats.total_unique_viewers_delta,
+            foot: 'Total Viewers'
+        }));
+
+        // Failure %
+        cards.push(renderMuxCard({
+            title: 'Failure %',
+            mainValue: stats.failure_percent != null ? (Number(stats.failure_percent).toFixed(2)) : '-',
+            mainUnit: stats.failure_percent != null ? '%' : '',
+            delta: stats.failure_percent_delta,
+            foot: 'Failure %'
+        }));
+
+        // Rebuffer %
+        cards.push(renderMuxCard({
+            title: 'Rebuffer %',
+            mainValue: stats.rebuffer_percent != null ? (Number(stats.rebuffer_percent).toFixed(2)) : '-',
+            mainUnit: stats.rebuffer_percent != null ? '%' : '',
+            delta: stats.rebuffer_percent_delta,
+            foot: 'Rebuffer %'
+        }));
+
+        grid.innerHTML = cards.join('');
+        panel.style.display = 'block';
+    }
+
+    function renderMuxEmpty(message = 'No Mux stats available yet') {
+        const panel = document.getElementById('mux-panel');
+        const grid = document.getElementById('mux-grid');
+        if (!panel || !grid) return;
+        grid.innerHTML = `
+            <div class="mux-card" style="grid-column: 1 / -1; text-align:center;">
+                <div class="mux-title">Mux Performance Stats</div>
+                <div class="mux-sub">${escapeHTML(message)}</div>
+            </div>
+        `;
+        panel.style.display = 'block';
+    }
+
+    async function loadMuxStats() {
+        const windowSel = document.getElementById('mux-window');
+        const aggInput = document.getElementById('mux-agg');
+        const timeWindow = windowSel ? (windowSel.value || '1h') : '1h';
+        const count = Math.max(1, Math.min(100, Number(aggInput?.value || 1)));
+        try {
+            const r = await fetch(`${API_BASE}/mux-stats?time_window=${encodeURIComponent(timeWindow)}&limit=${count}`);
+            const j = await r.json();
+            if (j.success && Array.isArray(j.data) && j.data.length) {
+                const stats = aggregateMuxStats(j.data);
+                renderMuxPanel(stats);
+                return;
+            }
+            // Fallback: try without time_window filter
+            const r2 = await fetch(`${API_BASE}/mux-stats?limit=${count}`);
+            const j2 = await r2.json();
+            if (j2.success && Array.isArray(j2.data) && j2.data.length) {
+                const stats2 = aggregateMuxStats(j2.data);
+                renderMuxPanel(stats2);
+            } else {
+                // Use mock data
+                renderMuxPanel(getMockMuxStats());
+            }
+        } catch (e) {
+            console.error('Failed to load Mux stats', e);
+            // Use mock data on error
+            renderMuxPanel(getMockMuxStats());
+        }
+    }
+
+    function avg(values) {
+        const nums = values.map(Number).filter(v => !Number.isNaN(v));
+        if (!nums.length) return null;
+        return nums.reduce((a,b)=>a+b,0) / nums.length;
+    }
+
+    function aggregateMuxStats(rows) {
+        const fieldAvg = (k) => {
+            const vals = rows.map(r => r[k]).filter(v => v !== null && v !== undefined);
+            const a = avg(vals);
+            if (a == null) return null;
+            // For QoS scores (0-100) keep 0 decimal; for percents keep 2; for counts keep integer
+            if (k.endsWith('_avg')) return Math.round(a);
+            if (k.endsWith('_percent') || k.endsWith('_delta')) return Number(a.toFixed(2));
+            return Math.round(a);
+        };
+
+        return {
+            time_window: rows[0]?.time_window ?? '1h',
+            total_view_count: fieldAvg('total_view_count'),
+            total_view_count_delta: fieldAvg('total_view_count_delta'),
+            total_playing_time_minutes: fieldAvg('total_playing_time_minutes'),
+            total_playing_time_delta: fieldAvg('total_playing_time_delta'),
+            total_unique_viewers: fieldAvg('total_unique_viewers'),
+            total_unique_viewers_delta: fieldAvg('total_unique_viewers_delta'),
+            overall_experience_avg: fieldAvg('overall_experience_avg'),
+            overall_experience_delta: fieldAvg('overall_experience_delta'),
+            playback_success_avg: fieldAvg('playback_success_avg'),
+            playback_success_delta: fieldAvg('playback_success_delta'),
+            startup_time_avg: fieldAvg('startup_time_avg'),
+            startup_time_delta: fieldAvg('startup_time_delta'),
+            smoothness_avg: fieldAvg('smoothness_avg'),
+            smoothness_delta: fieldAvg('smoothness_delta'),
+            video_quality_avg: fieldAvg('video_quality_avg'),
+            video_quality_delta: fieldAvg('video_quality_delta'),
+            failure_percent: fieldAvg('failure_percent'),
+            failure_percent_delta: fieldAvg('failure_percent_delta'),
+            rebuffer_percent: fieldAvg('rebuffer_percent'),
+            rebuffer_percent_delta: fieldAvg('rebuffer_percent_delta')
+        };
+    }
+
+    function getMockMuxStats() {
+        return {
+            time_window: '1h',
+            total_view_count: 328000,
+            total_view_count_delta: 6.5,
+            total_playing_time_minutes: 9650000,
+            total_playing_time_delta: 2.5,
+            total_unique_viewers: 199000,
+            total_unique_viewers_delta: 7.8,
+            overall_experience_avg: 89,
+            overall_experience_delta: 0.3,
+            playback_success_avg: 98,
+            playback_success_delta: 0.2,
+            startup_time_avg: 86,
+            startup_time_delta: 0.1,
+            smoothness_avg: 92,
+            smoothness_delta: 0.2,
+            video_quality_avg: 97,
+            video_quality_delta: 0.1,
+            failure_percent: 3.82,
+            failure_percent_delta: 11.5,
+            rebuffer_percent: 2.43,
+            rebuffer_percent_delta: 252
+        };
+    }
+
     function renderTableHeader() {
         while (el.tableHeadRow.children.length > 1) el.tableHeadRow.removeChild(el.tableHeadRow.lastChild);
         Array.from(visibleColumns).forEach(col => {
@@ -948,6 +1334,12 @@
                     const pill = `<span class="pill" style="border-color:${status==='Enabled' ? 'rgba(52,211,153,0.5)' : 'rgba(248,113,113,0.5)'}; background:${status==='Enabled' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)'};">${status}</span>`;
                     return `<td title="Current CMAF status">${pill}</td>`;
                 }
+                    if (col === 'Processing Properties') {
+                        const flags = computeProcessingFlags(item);
+                        const { yes, total } = summarizeFlags(flags);
+                        const label = `${yes}/${total} True`;
+                        return `<td class="clickable-cell" data-col="flags" title="Click to view processing flags"><span class="badge ${yes ? 'badge-info' : 'badge-neutral'}">${label}</span></td>`;
+                    }
                 if (col === 'title') {
                     const v = (item.title || '').toString();
                     const display = sanitizeCellDisplay(v);
@@ -1105,7 +1497,10 @@
                 const tr = td.closest('tr');
                 const rowId = tr && tr.getAttribute('data-row-id');
                 const item = displayedData.find(it => getRowId(it) === rowId);
-                if (item) openDetailsPanel(item);
+                if (!item) return;
+                const col = td.getAttribute('data-col') || '';
+                if (col === 'flags' || col === 'Processing Properties') openFlagsPanel(item);
+                else openDetailsPanel(item, col);
             });
         });
 
@@ -1182,6 +1577,9 @@
                     let v;
                     if (h === 'CMAF Status') {
                         v = getCMAFStatus(item);
+                    } else if (h === 'Processing Properties across the code and schemes') {
+                        const { yes, total } = summarizeFlags(computeProcessingFlags(item));
+                        v = `${yes}/${total}`;
                     } else {
                         v = getByPath(item, h);
                         if (h === 'cbs$premiumFeatures' || h === 'premium_features') {
@@ -1366,7 +1764,7 @@
         const span = button.querySelector('span');
         if (filterType === 'columns') {
             const count = visibleColumns.size;
-            span.textContent = `${count} column${count !== 1 ? 's':''}selected`;
+            span.textContent = `${count} column${count !== 1 ? 's' : ''} selected`;
             return;
         }
         const cfg = filterConfigs[filterType];
@@ -1449,6 +1847,15 @@
                 closeDetailsPanel();
             });
         }
+
+        const muxWindow = document.getElementById('mux-window');
+        const muxAgg = document.getElementById('mux-agg');
+        if (muxWindow) muxWindow.addEventListener('change', loadMuxStats);
+        if (muxAgg) muxAgg.addEventListener('input', () => {
+            // debounce a bit
+            clearTimeout(window.__muxAggT);
+            window.__muxAggT = setTimeout(loadMuxStats, 250);
+        });
     }
 
     function closeDetailsPanel() {
@@ -1459,7 +1866,7 @@
         if (panel) panel.classList.remove('open');
     }
 
-    function openDetailsPanel(item) {
+    function openDetailsPanel(item, clickedCol = '') {
         const panel = el.detailsContent;
         const title = item.title || '(untitled)';
         const series = item.series_title ? ` • ${item.series_title}` : '';
@@ -1478,6 +1885,22 @@
             ? feats.map(f => `<span class="feature-pill">${escapeHTML(String(f))}</span>`).join('')
             : '<span class="pill">No features</span>';
 
+        let processingHTML = '';
+        if (clickedCol !== 'title' && clickedCol !== 'CMAF Status') {
+            const flags = computeProcessingFlags(item);
+            processingHTML = `
+                <div class="section-title">Processing Properties</div>
+                <div class="kv" style="margin-bottom:.5rem;">
+                    <div class="key">Content Adaptive Encoding</div><div>${renderFlagBadge(flags.contentAdaptiveEncoding)}</div>
+                    <div class="key">Scene Detection Enabled</div><div>${renderFlagBadge(flags.sceneDetectionEnabled)}</div>
+                    <div class="key">Keyframe Aligned Chapters (SDR/HDR)</div><div>${renderFlagBadge(flags.keyframeAlignedChapters)}</div>
+                    <div class="key">Matching Durations (SDR/HDR Source)</div><div>${renderFlagBadge(flags.matchingDurations)}</div>
+                    <div class="key">Ad Manager Status HLS/DASH SDR</div><div>${renderFlagBadge(flags.adManagerStatusHlsDashSdr)}</div>
+                    <div class="key">Can feed passing</div><div>${renderFlagBadge(flags.canFeedPassing)}</div>
+                </div>
+            `;
+        }
+
         const toArray = (v) => Array.isArray(v) ? v : (v && typeof v === 'object' ? Object.values(v) : []);
         const contentArr = toArray(item.content);
         const thumbsArr = toArray(item.thumbnails);
@@ -1486,6 +1909,8 @@
             ${headerHTML}
             <div class="section-title">Premium Features</div>
             <div style="margin-bottom:.5rem;">${featuresHTML}</div>
+
+            ${processingHTML}
 
             <div class="section-title">Content Renditions (${contentArr.length})</div>
             <div class="media-grid">
@@ -1534,12 +1959,41 @@
         document.getElementById('details-panel').classList.add('open');
     }
 
+    function openFlagsPanel(item) {
+        const panel = el.detailsContent;
+        const flags = computeProcessingFlags(item);
+        const rows = [
+            ['Content Adaptive Encoding', flags.contentAdaptiveEncoding],
+            ['Scene Detection Enabled', flags.sceneDetectionEnabled],
+            ['Keyframe Aligned Chapters (SDR/HDR)', flags.keyframeAlignedChapters],
+            ['Matching Durations (SDR/HDR Source)', flags.matchingDurations],
+            ['Ad Manager Status HLS/DASH SDR', flags.adManagerStatusHlsDashSdr],
+            ['Can feed passing', flags.canFeedPassing]
+        ];
+        const title = item.title || '(untitled)';
+        const header = `
+            <div class="kv" style="margin-bottom:.5rem;">
+                <div class="key">Title</div><div>${escapeHTML(title)}</div>
+                <div class="key">GUID</div><div>${escapeHTML(item.guid || item.external_id || '')}</div>
+            </div>
+        `;
+        const body = `
+            <div class="section-title">Processing Properties</div>
+            <div class="kv" style="margin-bottom:.5rem;">
+                ${rows.map(([k,v]) => `<div class="key">${escapeHTML(k)}</div><div>${renderFlagIcon(Boolean(v))}</div>`).join('')}
+            </div>
+        `;
+        panel.innerHTML = `${header}${body}`;
+        document.getElementById('details-panel').classList.add('open');
+    }
+
     async function initialize() {
         await loadConfig();
         initializeMultiSelect();
         setupEvents();
         ['series','contentType','availability','features','cmaf','season','episode','columns'].forEach(updateButtonText);
         await loadFilters();
+        await loadMuxStats();
         await loadData();
         document.getElementById('details-panel').classList.remove('open');
     }

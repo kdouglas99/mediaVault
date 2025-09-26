@@ -1,4 +1,6 @@
-import { jest } from '@jest/globals'
+// Convert to CommonJS Jest global usage to avoid ESM import in setup
+/* eslint-disable no-undef */
+const { jest: jestGlobal } = global;
 
 // Mock console methods to reduce noise in tests
 const originalConsoleError = console.error
