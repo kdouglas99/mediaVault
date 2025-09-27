@@ -162,6 +162,11 @@ app.use(sanitizeInput);
 const rateLimit = createRateLimit();
 const RATE_LIMIT_UPLOAD_MAX = Number(process.env.UPLOAD_RATE_LIMIT_MAX || 3);
 const UPLOAD_RATE_LIMIT_WINDOW_MS = Number(process.env.UPLOAD_RATE_LIMIT_WINDOW_MS || (2 * 60 * 1000));
+// Higher limits for proxy and ingest flows used by the ingest tool
+const PROXY_RATE_LIMIT_MAX = Number(process.env.PROXY_RATE_LIMIT_MAX || 120);
+const PROXY_RATE_LIMIT_WINDOW_MS = Number(process.env.PROXY_RATE_LIMIT_WINDOW_MS || (60 * 1000));
+const INGEST_RATE_LIMIT_MAX = Number(process.env.INGEST_RATE_LIMIT_MAX || 240);
+const INGEST_RATE_LIMIT_WINDOW_MS = Number(process.env.INGEST_RATE_LIMIT_WINDOW_MS || (2 * 60 * 1000));
 
 // Health check (used by Docker HEALTHCHECK)
 app.get('/health', rateLimit(), async (req, res) => {
@@ -208,13 +213,15 @@ app.get('/api/test', rateLimit(), async (req, res) => {
 // Only allows http/https URLs and returns JSON body if possible
 app.post(
     '/api/proxy/fetch',
-    rateLimit(),
+    rateLimit(PROXY_RATE_LIMIT_MAX, PROXY_RATE_LIMIT_WINDOW_MS, { perPath: true }),
     [
-        body('url').optional().isString().isLength({ min: 1, max: 2048 }),
-        body('method').optional().isIn(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']).withMessage('Invalid method'),
+        body('url').optional().isString().isLength({ min: 1, max: 20000 }),
+        // Accept any string and normalize server-side to allow lowercase values
+        body('method').optional().isString().isLength({ min: 1, max: 10 }),
         body('headers').optional().isObject(),
         body('body').optional(),
-        body('curl').optional().isString().isLength({ min: 1, max: 10000 }),
+        // Allow large curl payloads
+        body('curl').optional().isString().isLength({ min: 1, max: 200000 }),
         handleValidationErrors
     ],
     async (req, res) => {
@@ -1069,7 +1076,7 @@ const insertBatchIntoStaging = async (client, rows) => {
     await client.query(sql, params);
 };
 
-app.post('/api/import/csv', rateLimit(RATE_LIMIT_UPLOAD_MAX, UPLOAD_RATE_LIMIT_WINDOW_MS, { perPath: true }), upload.single('csvFile'), validateFileUpload, validateCSVImport, async (req, res) => {
+app.post('/api/import/csv', rateLimit(INGEST_RATE_LIMIT_MAX, INGEST_RATE_LIMIT_WINDOW_MS, { perPath: true }), upload.single('csvFile'), validateFileUpload, validateCSVImport, async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ success: false, error: 'CSV file is required' });
     }
@@ -1134,7 +1141,7 @@ app.post('/api/import/csv', rateLimit(RATE_LIMIT_UPLOAD_MAX, UPLOAD_RATE_LIMIT_W
 });
 
 // JSON Import functionality (mirrors CSV import flow via staging + import function)
-app.post('/api/import/json', rateLimit(RATE_LIMIT_UPLOAD_MAX, UPLOAD_RATE_LIMIT_WINDOW_MS, { perPath: true }), async (req, res) => {
+app.post('/api/import/json', rateLimit(INGEST_RATE_LIMIT_MAX, INGEST_RATE_LIMIT_WINDOW_MS, { perPath: true }), async (req, res) => {
     const items = Array.isArray(req.body?.items) ? req.body.items : null;
     if (!items || items.length === 0) {
         return res.status(400).json({ success: false, error: 'Request body must include a non-empty array "items"' });
