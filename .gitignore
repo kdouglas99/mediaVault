@@ -205,4 +205,4 @@ performance-results/
 benchmark-results/
 
 # Security scan results
-security-scan-results/
+security-scan-results/tests/import_sample_files.csv
